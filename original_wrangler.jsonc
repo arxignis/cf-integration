@@ -7,7 +7,7 @@
 	"logpush": false,
   "upload_source_maps": true,
 	"compatibility_flags": [
-    "nodejs_compat",
+    "nodejs_compat"
   ],
 	"routes": [
 	],
@@ -32,5 +32,5 @@
 			"Authorization": "Bearer <PROMETHEUS_HEADERS_AUTHORIZATION>",
 			"X-Axiom-Dataset": "<PROMETHEUS_HEADERS_X_AXIOM_DATASET>"
 		}
-	},
+	}
 }

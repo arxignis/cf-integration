@@ -1,356 +1,164 @@
-# AX Proxy
+# Arxignis Proxy
 
-## Requirements
-
-### Prerequisites
-- **Node.js 16+**: Required for running the Cloudflare Worker
-- **npm/npx**: Package manager and command runner
-- **Wrangler CLI**: Cloudflare Workers command-line tool
-- **Cloudflare Account**: With Workers enabled
-- **Arxignis API Key**: For threat intelligence service
-- **Cloudflare Turnstile Keys**: For captcha challenges
-
-### System Requirements
-- **Operating System**: macOS or Linux
-
-## Installation
-```
-git clone https://github.com/arxignis/cf-integration
-bash install.sh
-```
-
-## 🎉 Join Our Discord Community! 🎉
-
-Come hang out with us and be part of our awesome community on Discord! Whether you're here to chat, get support, or just have fun, everyone is welcome.
-
-[![Join us on Discord](https://img.shields.io/badge/Join%20Us%20on-Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/jzsW5Q6s9q)
-
-See you there! 💬✨
-
-A high-performance Cloudflare Worker that provides intelligent traffic filtering, threat detection, and remediation capabilities. Built with TypeScript and designed for seamless integration with Cloudflare's edge network.
+A Cloudflare Workers-based proxy that provides threat intelligence and protection for your web applications.
 
 ## Features
 
-### 🔒 Security & Remediation
-- **Intelligent IP Filtering**: Real-time threat assessment and IP reputation checking
-- **Multi-level Remediation**: Block, captcha challenge, or allow traffic based on threat scores
-- **Cloudflare Turnstile Integration**: Seamless captcha challenges using Cloudflare's privacy-focused solution
-- **Custom Error Pages**: Configurable HTML, JSON, or external error page responses
+- **Threat Intelligence**: Real-time threat detection using Arxignis API
+- **Traffic Monitoring**: Monitor and analyze incoming traffic
+- **Blocking Mode**: Automatically block malicious traffic
+- **Turnstile Integration**: Cloudflare Turnstile for bot protection
+- **Prometheus Metrics**: Optional metrics collection via Axiom
+- **Easy Deployment**: Simple installation script for Cloudflare Workers
 
-### ⚡ Performance
-- **Two-tier Caching**: In-memory L1 cache + Cloudflare KV L2 cache for optimal performance
-- **Smart Caching**: Configurable TTL with intelligent cache invalidation
-- **Edge Computing**: Runs on Cloudflare's global edge network for minimal latency
+## Requirements
 
-### 📊 Observability & Telemetry
-- **OpenTelemetry Integration**: Built-in tracing and metrics collection
-- **Multiple Telemetry Providers**: Support for Axiom and Honeycomb
-- **Structured Logging**: Comprehensive request logging with enriched data
-- **Performance Metrics**: Detailed timing and performance insights
+### System Requirements
 
-### 🌐 Network Intelligence
-- **IP Geolocation**: Automatic geographic enrichment
-- **Network Analysis**: ASN and organization detection
-- **TLS Fingerprinting**: Advanced client fingerprinting capabilities
-- **Bot Detection**: Integration with Cloudflare Bot Management
+- **Node.js**: Version 16 or higher
+- **npm/npx**: For package management and Wrangler
+- **jq**: For JSON parsing (automatically installed if missing)
+- **Bash**: For running the installation script
+
+### Cloudflare Requirements
+
+- **Cloudflare Account**: Active Cloudflare account
+- **API Token**: Cloudflare API token with the following permissions:
+  - Account Settings (Read)
+  - Challenge Widgets (Edit)
+  - User Details (Read)
+  - Workers KV Storage (Edit)
+  - Workers Routes (Edit)
+  - Workers Scripts (Edit)
+  - Zone (Read)
+  - DNS (Read)
+
+### External Services
+
+- **Arxignis API Key**: Get your API key from [arxignis.com](https://arxignis.com)
+- **Domain**: A domain you control and can configure DNS for
+- **Axiom** (Optional): For Prometheus metrics collection
 
 ## Installation
 
-### Prerequisites
-- Node.js 22+ and pnpm
-- Cloudflare account with Workers enabled
-- Wrangler CLI installed globally: `npm install -g wrangler`
+### Quick Start
 
-### Setup
+1. **Clone or download** the proxy files to your local machine
+2. **Navigate** to the proxy directory:
+   ```bash
+   cd proxy
+   ```
+3. **Run the installation script**:
+   ```bash
+   ./install.sh
+   ```
+4. **Follow the prompts** to configure your settings
+5. **Deploy** to Cloudflare Workers:
+   ```bash
+   pnpm install
+   npx wrangler deploy
+   ```
 
-1. **Clone and install dependencies**:
-```bash
-git clone git@github.com:arxignis/cf-integration.git
-cd proxy
-pnpm install
-```
+### Manual Installation
 
-2. **Generate Cloudflare Turnstile Keys**:
-   - Go to [Cloudflare Dashboard](https://dash.cloudflare.com/)
-   - Navigate to **Security** → **Turnstile**
-   - Click **Add site**
-   - Choose **Managed** challenge type
-   - Add your domain(s) - maximum 15 hostnames per proxy instance (Free plan) or 200 hostnames (Enterprise plan)
-   - Copy the **Site Key** and **Secret Key**
+If you prefer to configure manually:
 
-3. **Configure environment variables**:
-Create a `.dev.vars` file for local development:
-```env
-ARXIGNIS_API_KEY=your_api_key_here
-TURNSTILE_SITE_KEY=your_turnstile_site_key
-TURNSTILE_SECRET_KEY=your_turnstile_secret_key
-MODE=block
-PERFORMANCE_METRICS=true
-```
+1. **Install dependencies**:
+   ```bash
+   pnpm install
+   ```
 
-4. **Set up Cloudflare KV namespace**:
-```bash
-wrangler kv:namespace create "AX_CACHE"
-```
+2. **Configure `wrangler.jsonc`**:
+   - Set your Cloudflare Account ID
+   - Configure your domain routes
+   - Add your API keys and settings
 
-5. **Update wrangler.jsonc**:
-Replace the KV namespace ID with your created namespace:
-```json
-"kv_namespaces": [
-  {
-    "binding": "AX_CACHE",
-    "id": "your_kv_namespace_id"
-  }
-]
-```
+3. **Deploy**:
+   ```bash
+   npx wrangler deploy
+   ```
 
 ## Configuration
 
 ### Environment Variables
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ARXIGNIS_API_KEY` | API key for threat intelligence service | Yes | - |
-| `TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key | Yes | - |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key | Yes | - |
-| `MODE` | Operation mode: `block` or `monitor` | No | `block` |
-| `PERFORMANCE_METRICS` | Enable performance metrics | No | `true` |
-| `ERROR_PAGE_TYPE` | Error page format: `html`, `json`, `external` | No | `html` |
+The following environment variables can be configured in `wrangler.jsonc`:
 
-### Telemetry Configuration
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `MODE` | Operation mode: `monitor` or `block` | Yes |
+| `ARXIGNIS_API_KEY` | Your Arxignis API key | Yes |
+| `TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key | Yes |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key | Yes |
+| `PERFORMANCE_METRICS` | Enable metrics: `true` or `false` | No |
+| `account_id` | Your Cloudflare Account ID | Yes |
 
-#### Axiom Integration
-```json
-{
-  "PROMETHEUS_URL": "https://api.axiom.co/v1/traces",
-  "PROMETHEUS_HEADERS": {
-    "Authorization": "Bearer your_axiom_token",
-    "X-Axiom-Dataset": "your_dataset_name"
-  }
-}
-```
+### Modes
 
-#### Honeycomb Integration
-```json
-{
-  "PROMETHEUS_URL": "https://api.honeycomb.io/v1/traces",
-  "PROMETHEUS_HEADERS": {
-    "x-honeycomb-team": "your_team_key",
-    "x-honeycomb-dataset": "your_dataset_name"
-  }
-}
-```
+- **Monitor Mode**: Only monitors traffic without blocking
+- **Block Mode**: Monitors and blocks malicious traffic
+
+### Turnstile Setup
+
+The installation script can automatically create Turnstile widgets, or you can use existing ones:
+
+1. **Automatic**: Answer "no" when asked about existing Turnstile keys
+2. **Manual**: Provide your existing site key and secret key
 
 ## Usage
 
-### Development
-```bash
-# Start local development server
-pnpm dev
+### DNS Configuration
 
-# Run tests
-pnpm test
+After deployment, configure your domain's DNS:
 
-# Generate Cloudflare types
-pnpm cf-typegen
-```
+1. **Add a CNAME record** pointing to your Cloudflare Workers domain
+2. **Or use Cloudflare's proxy** for additional benefits
 
-### Deployment
-```bash
-# Deploy to Cloudflare Workers
-pnpm deploy
-```
+### Monitoring
 
-### Route Configuration
-Configure routes in `wrangler.jsonc`. **Maximum 15 hostnames per proxy instance (Free plan) or 200 hostnames (Enterprise plan)**:
+- **Logs**: View logs in Cloudflare Workers dashboard
+- **Metrics**: If enabled, view metrics in your Axiom dashboard
+- **Analytics**: Monitor traffic patterns and threats
 
-```json
-{
-  "routes": [
-    {
-      "pattern": "*.yourdomain1.com/*",
-      "zone_name": "yourdomain1.com"
-    },
-    {
-      "pattern": "*.yourdomain2.com/*",
-      "zone_name": "yourdomain2.com"
-    },
-    {
-      "pattern": "*.yourdomain3.com/*",
-      "zone_name": "yourdomain3.com"
-    },
-    {
-      "pattern": "*.yourdomain4.com/*",
-      "zone_name": "yourdomain4.com"
-    },
-    {
-      "pattern": "*.yourdomain5.com/*",
-      "zone_name": "yourdomain5.com"
-    },
-    {
-      "pattern": "*.yourdomain6.com/*",
-      "zone_name": "yourdomain6.com"
-    },
-    {
-      "pattern": "*.yourdomain7.com/*",
-      "zone_name": "yourdomain7.com"
-    },
-    {
-      "pattern": "*.yourdomain8.com/*",
-      "zone_name": "yourdomain8.com"
-    },
-    {
-      "pattern": "*.yourdomain9.com/*",
-      "zone_name": "yourdomain9.com"
-    },
-    {
-      "pattern": "*.yourdomain10.com/*",
-      "zone_name": "yourdomain10.com"
-    },
-    {
-      "pattern": "*.yourdomain11.com/*",
-      "zone_name": "yourdomain11.com"
-    },
-    {
-      "pattern": "*.yourdomain12.com/*",
-      "zone_name": "yourdomain12.com"
-    },
-    {
-      "pattern": "*.yourdomain13.com/*",
-      "zone_name": "yourdomain13.com"
-    },
-    {
-      "pattern": "*.yourdomain14.com/*",
-      "zone_name": "yourdomain14.com"
-    },
-    {
-      "pattern": "*.yourdomain15.com/*",
-      "zone_name": "yourdomain15.com"
-    }
-  ]
-}
-```
+## Troubleshooting
 
-**Note**: If you need to protect more than 15 hostnames (Free plan) or 200 hostnames (Enterprise plan), create additional proxy instances with separate configurations.
+### Common Issues
 
-## Architecture
+1. **Installation fails**:
+   - Ensure Node.js version 16+ is installed
+   - Check that you have proper Cloudflare API token permissions
+   - Verify your Arxignis API key is valid
 
-### System Overview
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Client        │    │   Cloudflare     │    │   Origin        │
-│   Request       │───▶│   Edge Network   │───▶│   Server        │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │   AX Proxy       │
-                       │   Worker         │
-                       └──────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │   Two-Tier       │
-                       │   Cache          │
-                       │   (L1 + L2 KV)   │
-                       └──────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │   Threat Intel   │
-                       │   API            │
-                       └──────────────────┘
-```
+2. **Turnstile widget creation fails**:
+   - Verify your Cloudflare API token has "Challenge Widgets (Edit)" permission
+   - Check that your domain is properly configured in Cloudflare
 
-### Request Flow
-1. **IP Extraction**: Extract client IP from Cloudflare headers
-2. **Cache Check**: Check two-tier cache for existing remediation decisions
-3. **Threat Assessment**: Query threat intelligence API if not cached
-4. **Remediation**: Apply block, captcha, or allow based on threat score
-5. **Telemetry**: Send observability data to configured providers
-6. **Response**: Return appropriate response to client
+3. **Deployment fails**:
+   - Ensure you're logged in to Wrangler: `npx wrangler login`
+   - Check your `wrangler.jsonc` configuration
+   - Verify your Cloudflare Account ID is correct
 
-### Caching Strategy
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Request       │───▶│   L1 Cache      │───▶│   L2 Cache      │
-│   IP Check      │    │   (In-Memory)   │    │   (Cloudflare   │
-└─────────────────┘    │   TTL: 30s      │    │    KV)          │
-                       │   Size: 5000    │    │   TTL: 5min     │
-                       └─────────────────┘    └─────────────────┘
-                                │                       │
-                                ▼                       ▼
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │   Cache Hit     │    │   Cache Miss    │
-                       │   Return        │    │   API Call      │
-                       │   Decision      │    │   & Store       │
-                       └─────────────────┘    └─────────────────┘
-```
+### Getting Help
 
-- **L1 Cache**: In-memory cache with 30-second max TTL
-- **L2 Cache**: Cloudflare KV with configurable TTL (up to 5 minutes)
-- **Cache Invalidation**: Automatic cleanup of expired or invalid entries
+- **Documentation**: Visit [docs.arxignis.com](https://docs.arxignis.com)
+- **Support**: Contact support through the Arxignis platform
+- **Issues**: Report bugs or issues through the Arxignis support channels
 
-### Error Handling
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   API Error     │───▶│   Fallback      │───▶│   Allow Traffic │
-│   or Timeout    │    │   Decision      │    │   (Graceful     │
-└─────────────────┘    │   (30s timeout) │    │    Degradation) │
-                       └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   Error Logging │
-                       │   & Telemetry   │
-                       └─────────────────┘
-```
+## Security
 
-- **Graceful Degradation**: Falls back to allow if API is unavailable
-- **Timeout Protection**: 30-second timeout for external API calls
-- **Error Logging**: Comprehensive error tracking and reporting
-
-## Monitoring & Observability
-
-### Metrics Collected
-- Request latency and throughput
-- Cache hit/miss ratios
-- Remediation decision distribution
-- Error rates and types
-- Geographic and network data
-
-### Tracing
-- Request flow through the proxy
-- External API call timing
-- Cache operation performance
-- Error propagation paths
-
-## Security Considerations
-
-- **API Key Protection**: Store sensitive keys as environment variables
-- **Rate Limiting**: Implement appropriate rate limits for your use case
-- **Error Information**: Configure error pages to avoid information disclosure
-- **TLS Requirements**: Enforce HTTPS for all external communications
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+- **API Keys**: Never commit API keys to version control
+- **Environment Variables**: Use Cloudflare Workers secrets for sensitive data
+- **Access Control**: Regularly review and rotate API tokens
+- **Monitoring**: Enable logging and monitoring for security events
 
 ## License
 
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at:
+This project is licensed under the terms specified in the LICENSE file.
 
-http://www.apache.org/licenses/LICENSE-2.0
+## Contributing
 
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+Contributions are welcome! Please read the contributing guidelines before submitting pull requests.
 
-## Support
+---
 
-For issues and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the configuration examples
+For more information, visit [arxignis.com](https://arxignis.com)

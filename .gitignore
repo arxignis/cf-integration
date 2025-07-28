@@ -174,3 +174,4 @@ node_modules
 .env
 wrangler-dev.jsonc
 wrangler-prod.jsonc
+wrangler.jsonc
