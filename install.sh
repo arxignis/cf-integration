@@ -234,10 +234,12 @@ save_answer "has_api_key" "$has_api_key"
 if [[ "$has_api_key" == "yes" || "$has_api_key" == "y" ]]; then
     if [ ! -z "$saved_arxignis_api_key" ]; then
         echo -e "${BLUE}Previous API key found${NC}"
-        read -p "Enter your Arxignis API key (default: use previous): " arxignis_api_key
+        read -s -p "Enter your Arxignis API key (default: use previous): " arxignis_api_key
+        echo ""
         arxignis_api_key=${arxignis_api_key:-$saved_arxignis_api_key}
     else
-        read -p "Enter your Arxignis API key: " arxignis_api_key
+        read -s -p "Enter your Arxignis API key: " arxignis_api_key
+        echo ""
     fi
 
     if [ ! -z "$arxignis_api_key" ]; then
@@ -276,11 +278,13 @@ if [[ "$has_turnstile" == "yes" || "$has_turnstile" == "y" ]]; then
         echo -e "${BLUE}Previous Turnstile keys found${NC}"
         read -p "Enter your Turnstile site key (default: use previous): " turnstile_site_key
         turnstile_site_key=${turnstile_site_key:-$saved_turnstile_site_key}
-        read -p "Enter your Turnstile secret key (default: use previous): " turnstile_secret_key
+        read -s -p "Enter your Turnstile secret key (default: use previous): " turnstile_secret_key
+        echo ""
         turnstile_secret_key=${turnstile_secret_key:-$saved_turnstile_secret_key}
     else
         read -p "Enter your Turnstile site key: " turnstile_site_key
-        read -p "Enter your Turnstile secret key: " turnstile_secret_key
+        read -s -p "Enter your Turnstile secret key: " turnstile_secret_key
+        echo ""
     fi
 
     if [ ! -z "$turnstile_site_key" ] && [ ! -z "$turnstile_secret_key" ]; then
@@ -322,12 +326,14 @@ if [[ "$enable_metrics" == "yes" || "$enable_metrics" == "y" ]]; then
 
     if [ ! -z "$saved_axiom_auth" ] && [ ! -z "$saved_axiom_dataset" ]; then
         echo -e "${BLUE}Previous Axiom credentials found${NC}"
-        read -p "Enter your Axiom authorization token (default: use previous): " axiom_auth
+        read -s -p "Enter your Axiom authorization token (default: use previous): " axiom_auth
+        echo ""
         axiom_auth=${axiom_auth:-$saved_axiom_auth}
         read -p "Enter your Axiom dataset name (default: use previous): " axiom_dataset
         axiom_dataset=${axiom_dataset:-$saved_axiom_dataset}
     else
-        read -p "Enter your Axiom authorization token: " axiom_auth
+        read -s -p "Enter your Axiom authorization token: " axiom_auth
+        echo ""
         read -p "Enter your Axiom dataset name: " axiom_dataset
     fi
 
@@ -369,10 +375,12 @@ save_answer "has_cf_token" "$has_cf_token"
 if [[ "$has_cf_token" == "yes" || "$has_cf_token" == "y" ]]; then
     if [ ! -z "$saved_cf_api_token" ]; then
         echo -e "${BLUE}Previous API token found${NC}"
-        read -p "Enter your Cloudflare API token (default: use previous): " cf_api_token
+        read -s -p "Enter your Cloudflare API token (default: use previous): " cf_api_token
+        echo ""
         cf_api_token=${cf_api_token:-$saved_cf_api_token}
     else
-        read -p "Enter your Cloudflare API token: " cf_api_token
+        read -s -p "Enter your Cloudflare API token: " cf_api_token
+        echo ""
     fi
 
     if [ ! -z "$cf_api_token" ]; then
