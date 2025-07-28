@@ -1,6 +1,23 @@
 # AX Proxy
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/arxignis/cf-integration)
+## Requirements
+
+### Prerequisites
+- **Node.js 16+**: Required for running the Cloudflare Worker
+- **npm/npx**: Package manager and command runner
+- **Wrangler CLI**: Cloudflare Workers command-line tool
+- **Cloudflare Account**: With Workers enabled
+- **Arxignis API Key**: For threat intelligence service
+- **Cloudflare Turnstile Keys**: For captcha challenges
+
+### System Requirements
+- **Operating System**: macOS or Linux
+
+## Installation
+```
+git clone https://github.com/arxignis/cf-integration
+bash install.sh
+```
 
 ## 🎉 Join Our Discord Community! 🎉
 
