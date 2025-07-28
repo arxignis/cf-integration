@@ -8,6 +8,7 @@ export function telemetry(request: Request, env: Env, result: RemediationResult)
 		clientIp: request.headers.get('CF-Connecting-IP') || '',
 		hostName: request.headers.get('Host') || '',
 		remediation: result.decision,
+		score: result.score,
 		cached: result.cached,
 	}
 

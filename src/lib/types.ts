@@ -1,6 +1,7 @@
 export interface RemediationResult {
 	decision: string;
 	cached: boolean;
+	score: number;
 }
 
 export interface TelemetryTemplate {
@@ -9,6 +10,7 @@ export interface TelemetryTemplate {
 	hostName: string;
 	remediation: string;
 	cached: boolean;
+	score: number;
 }
 
 export type RemediationResponse = {

@@ -65,7 +65,7 @@ const handler = {
 				if (env.MODE != 'block') {
 					return fetch(request);
 				}
-				telemetry(request, env, { decision, cached: decisionCached || false });
+				telemetry(request, env, { decision, cached: decisionCached || false, score: remediationResult.score || 0 });
 				console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
 				const errorPage = errorPageRenderer(request, env);
 				return new Response(errorPage.content as string, {
@@ -77,7 +77,7 @@ const handler = {
 				if (env.MODE != 'block') {
 					return fetch(request);
 				}
-				telemetry(request, env, { decision, cached: decisionCached || false });
+				telemetry(request, env, { decision, cached: decisionCached || false, score: remediationResult.score || 0 });
 				console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
 				return captcha(request, { ...env, ERROR_PAGE_TYPE: 'html' } as EnvWithErrorPage);
 			default:
