@@ -163,7 +163,7 @@ echo ""
 
 # 4. Ask for Prometheus metrics
 echo -e "${YELLOW}4. Do you want to enable Prometheus metrics?${NC}"
-echo -e "   Note: Only Axiom provider is supported"
+echo -e "   Note: In Installation, only Axiom provider is supported"
 read -p "Enter 'yes' to enable metrics, or 'no' to skip: " enable_metrics
 
 if [[ "$enable_metrics" == "yes" || "$enable_metrics" == "y" ]]; then
@@ -206,7 +206,7 @@ fi
 
 # Create KV namespace
 echo -e "${BLUE}Creating KV namespace...${NC}"
-kv_output=$(npx wrangler kv:namespace create AX_CACHE 2>&1)
+kv_output=$(npx wrangler kv namespace create ax_cache 2>&1)
 if [ $? -eq 0 ]; then
     # Extract the namespace ID from the output
     namespace_id=$(echo "$kv_output" | grep -o 'id = "[^"]*"' | cut -d'"' -f2)
