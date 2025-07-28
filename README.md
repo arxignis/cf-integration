@@ -1,5 +1,16 @@
 # Arxignis Proxy
 
+[![asciicast](https://asciinema.org/a/hbWaxtYD07lPKX9eL2lXmSlUZ.svg)](https://asciinema.org/a/hbWaxtYD07lPKX9eL2lXmSlUZ)
+
+
+## 🎉 Join Our Discord Community! 🎉
+
+Come hang out with us and be part of our awesome community on Discord! Whether you're here to chat, get support, or just have fun, everyone is welcome.
+
+[![Join us on Discord](https://img.shields.io/badge/Join%20Us%20on-Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/jzsW5Q6s9q)
+
+See you there! 💬✨
+
 A Cloudflare Workers-based proxy that provides threat intelligence and protection for your web applications.
 
 ## Features
@@ -44,9 +55,12 @@ A Cloudflare Workers-based proxy that provides threat intelligence and protectio
 ### Quick Start
 
 1. **Clone or download** the proxy files to your local machine
+   ```bash
+    git clone https://github.com/arxignis/cf-integration
+	 ```
 2. **Navigate** to the proxy directory:
    ```bash
-   cd proxy
+   cd cf-integration
    ```
 3. **Run the installation script**:
    ```bash
