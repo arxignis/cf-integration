@@ -1,0 +1,36 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "ax-proxy",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-06-17",
+	"workers_dev": false,
+	"logpush": false,
+  "upload_source_maps": true,
+	"compatibility_flags": [
+    "nodejs_compat",
+  ],
+	"routes": [
+	],
+	"observability": {
+		"enabled": true
+	},
+	"kv_namespaces": [
+		{
+			"binding": "AX_CACHE",
+			"id": "<AX_CACHE_ID>"
+		}
+	],
+	"placement": { "mode": "smart" },
+	"vars": {
+		"ARXIGNIS_API_KEY": "<ARXIGNIS_API_KEY>",
+		"TURNSTILE_SITE_KEY": "<TURNSTILE_SITE_KEY>",
+		"TURNSTILE_SECRET_KEY": "<TURNSTILE_SECRET_KEY>",
+		"MODE": "block",
+		"PERFORMANCE_METRICS": "false",
+		"PROMETHEUS_URL": "https://api.axiom.co/v1/traces",
+		"PROMETHEUS_HEADERS": {
+			"Authorization": "Bearer <PROMETHEUS_HEADERS_AUTHORIZATION>",
+			"X-Axiom-Dataset": "<PROMETHEUS_HEADERS_X_AXIOM_DATASET>"
+		}
+	},
+}
