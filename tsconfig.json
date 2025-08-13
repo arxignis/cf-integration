@@ -1,7 +1,7 @@
 {
-	"extends": "../tsconfig.json",
+	"extends": "./tsconfig_global.json",
 	"exclude": ["test"],
-	"include": ["worker-configuration.d.ts", "src/**/*.ts", "src/**/**/*.ts", "../arxignis/temp/metrics.ts", "../arxignis/temp/metrics-scheduler.ts"],
+	"include": ["worker-configuration.d.ts", "src/**/*.ts", "src/**/**/*.ts"],
 	"compilerOptions": {
 		"types": [
 			"./worker-configuration.d.ts"

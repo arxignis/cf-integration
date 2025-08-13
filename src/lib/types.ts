@@ -4,7 +4,7 @@ export interface RemediationResult {
 	score: number;
 }
 
-export interface TelemetryTemplate {
+export interface MetricsTemplate {
 	timestamp: string;
 	clientIp: string;
 	hostName: string;
@@ -35,37 +35,15 @@ export type LogTemplate = {
 	version: string;
 	clientIp: string;
 	hostName: string;
-	headers: Record<string, string>;
+	http: {
+		method: string;
+		url: string;
+		headers: Record<string, string>;
+		body: object | string | null;
+	};
 	tls: {
 		version: string;
 		cipher: string;
-		clientRandom: string;
-		clientCiphersSha1: string;
-		clientHelloLength: string;
-		clientExtensionsSha1: string;
-		clientExtensionsSha1Le: string;
-	}
-	protocol: {
-		httpVersion: string;
-		clientAcceptEncoding: string;
-	}
-	enriched: {
-		geo: {
-			country: string;
-			city: string;
-			latitude: string;
-			longitude: string;
-			timezone: string;
-			continent: string;
-			postalCode: string;
-		}
-		network: {
-			asn: string;
-			asOrganization: string;
-		}
-	}
-	additional: {
-		colo: string;
-		botManagement: object;
-	}
+	};
+	additional?: Record<string, unknown> | null;
 }

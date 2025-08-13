@@ -5,7 +5,8 @@ import { RemediationCache, RemediationResponse } from './types';
 export async function remediation(request: Request, env: Env): Promise<{ decision: string | null; cached?: boolean; score?: number }> {
 
 	try {
-		const clientIP = request.headers.get('CF-Connecting-IP');
+		// const clientIP = request.headers.get('CF-Connecting-IP');
+		const clientIP = '47.237.1.12';
 		if (!clientIP) {
 			return { decision: null };
 		}
@@ -34,8 +35,9 @@ export async function remediation(request: Request, env: Env): Promise<{ decisio
 			}
 		}
 
-		const data = await makeApiRequestAsync<RemediationResponse>(`remediation/${clientIP}`, 'GET', undefined, env.ARXIGNIS_API_KEY);
+		const data = await makeApiRequestAsync<RemediationResponse>(env, `remediation/${clientIP}`, 'GET', undefined, env.ARXIGNIS_API_KEY);
 		if (!data) {
+			console.error(`Failed to get remediation data for IP: ${clientIP}`);
 			return { decision: null };
 		}
 
