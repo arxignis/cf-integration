@@ -176,3 +176,4 @@ wrangler-dev.jsonc
 wrangler-prod.jsonc
 wrangler.jsonc
 .install_answers
+worker-configuration.d.ts
