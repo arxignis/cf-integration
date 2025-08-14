@@ -11,6 +11,11 @@
   ],
 	"routes": [
 	],
+	"assets": {
+    "directory": "./public/",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
 	"observability": {
 		"enabled": true
 	},
@@ -20,12 +25,31 @@
 			"id": "<AX_CACHE_ID>"
 		}
 	],
-	"placement": { "mode": "smart" },
+	"durable_objects": {
+    "bindings": [
+      {
+        "name": "LOG_BUFFER",
+        "class_name": "ArxignisLogBufferDO",
+      },
+      {
+        "name": "METRICS_BUFFER",
+        "class_name": "ArxignisMetricsBufferDO",
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["ArxignisLogBufferDO", "ArxignisMetricsBufferDO"]
+    }
+  ],
 	"vars": {
 		"ARXIGNIS_API_KEY": "<ARXIGNIS_API_KEY>",
 		"TURNSTILE_SITE_KEY": "<TURNSTILE_SITE_KEY>",
 		"TURNSTILE_SECRET_KEY": "<TURNSTILE_SECRET_KEY>",
 		"MODE": "block",
+		"BUFFER_FLUSH_INTERVAL": "5000",
+		"BUFFER_MAX_RETRIES": "3",
 		"PERFORMANCE_METRICS": "false",
 		"PROMETHEUS_URL": "https://api.axiom.co/v1/traces",
 		"PROMETHEUS_HEADERS": {

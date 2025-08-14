@@ -12,8 +12,7 @@ import version from './lib/version';
 const handler = {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		try {
-			// const clientIP = request.headers.get('CF-Connecting-IP') || '';
-      const clientIP = '216.73.216.15';
+			const clientIP = request.headers.get('CF-Connecting-IP') || '';
 
 			const remediationResult = await remediation(request, env);
 			const decision = remediationResult.decision;

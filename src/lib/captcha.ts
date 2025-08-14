@@ -11,7 +11,11 @@ export const captcha = async (request: Request, env: Env) => {
     try {
       const isValid = await jwt.verify(cookie['ax_captcha'], secretKey + ip);
       if (isValid) {
-        return fetch(request);
+        return new Response(request.body, {
+          status: 200,
+          statusText: 'OK',
+          headers: request.headers,
+        });
       }
     } catch (err) {
       console.log(err);
