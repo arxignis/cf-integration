@@ -3,7 +3,7 @@ import { CacheableMemory } from 'cacheable';
 // Initialize L1 cache instance
 const l1Cache = new CacheableMemory(
 	{
-		ttl: 60,
+		ttl: 300,
 		lruSize: 5000, // Maximum number of items in LRU cache
 	},
 );
@@ -31,7 +31,7 @@ export class CacheManager {
 		if (l2Value !== null && l2Value !== undefined && l2Value !== '') {
 			console.log('L2 cache hit for key:', key);
 			// Populate L1 cache with L2 value (cache for 60 seconds)
-			await this.l1Cache.set(key, l2Value, 60);
+			this.l1Cache.set(key, l2Value, 60);
 			return l2Value;
 		}
 
@@ -41,15 +41,14 @@ export class CacheManager {
 
 	async set(key: string, value: string, ttl: number): Promise<void> {
 		// Set in both L1 and L2 caches
-		const l1Ttl = Math.min(ttl, 30); // L1 cache max 30 seconds
-		await this.l1Cache.set(key, value, l1Ttl);
+		this.l1Cache.set(key, value, ttl);
 		await this.l2Cache.put(key, value, { expirationTtl: ttl });
-		console.log(`Set cache for key: ${key}, L1 TTL: ${l1Ttl}s, L2 TTL: ${ttl}s`);
+		console.log(`Set cache for key: ${key}, L1 TTL: ${ttl}s, L2 TTL: ${ttl}s`);
 	}
 
 	async delete(key: string): Promise<void> {
 		// Delete from both caches
-		await this.l1Cache.delete(key);
+		this.l1Cache.delete(key);
 		await this.l2Cache.delete(key);
 		console.log('Deleted cache for key:', key);
 	}

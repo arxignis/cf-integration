@@ -1,50 +1,51 @@
-import { makeApiRequest } from "./helper";
+import { addToLogBuffer } from "./durable-buffer";
 import { LogTemplate } from "./types";
 import version from "./version";
 
 export function log(request: Request, env: Env) {
+	// Extract request body if present
+	let requestBody: object | string | null = null;
+	if (request.body) {
+		const contentType = request.headers.get('content-type') || '';
+		if (contentType.includes('application/json')) {
+			// For JSON requests, we'll need to clone to read body
+			request.clone().json().then(body => {
+				requestBody = body as object;
+			}).catch(() => {
+				requestBody = null;
+			});
+		} else if (contentType.includes('text/') || contentType.includes('application/')) {
+			request.clone().text().then(body => {
+				requestBody = body;
+			}).catch(() => {
+				requestBody = null;
+			});
+		}
+	}
+
 	const logTemplate: LogTemplate = {
 		timestamp: new Date().toISOString(),
 		version: version,
 		clientIp: request.headers.get('CF-Connecting-IP') || '',
 		hostName: request.headers.get('Host') || '',
-		headers: Object.fromEntries(request.headers.entries()),
+		http: {
+			method: request.method,
+			url: request.url,
+			headers: Object.fromEntries(request.headers.entries()),
+			body: requestBody
+		},
 		tls: {
 			version: String(request.cf?.tlsVersion || ''),
-			cipher: String(request.cf?.tlsCipher || ''),
-			clientRandom: String(request.cf?.tlsClientRandom || ''),
-			clientCiphersSha1: String(request.cf?.tlsClientCiphersSha1 || ''),
-			clientHelloLength: String(request.cf?.tlsClientHelloLength || ''),
-			clientExtensionsSha1: String(request.cf?.tlsClientExtensionsSha1 || ''),
-			clientExtensionsSha1Le: String(request.cf?.tlsClientExtensionsSha1Le || ''),
-		},
-		protocol: {
-			httpVersion: String(request.cf?.httpVersion || ''),
-			clientAcceptEncoding: String(request.cf?.httpAcceptEncoding || ''),
-		},
-		enriched: {
-			geo: {
-				country: String(request.cf?.country || ''),
-				city: String(request.cf?.city || ''),
-				latitude: String(request.cf?.latitude || ''),
-				longitude: String(request.cf?.longitude || ''),
-				timezone: String(request.cf?.timezone || ''),
-				continent: String(request.cf?.continent || ''),
-				postalCode: String(request.cf?.postalCode || ''),
-			},
-			network: {
-				asn: String(request.cf?.asn || ''),
-				asOrganization: String(request.cf?.asOrganization || ''),
-			},
+			cipher: String(request.cf?.tlsCipher || '')
 		},
 		additional: {
 			colo: String(request.cf?.colo || ''),
-			botManagement: request.cf?.botManagement || {},
-		},
+			botManagement: request.cf?.botManagement || Object.create(null),
+		}
 	};
 
-	// Fire and forget - don't block the response
-	makeApiRequest('log', 'POST', logTemplate, env.ARXIGNIS_API_KEY);
+	// Add to Durable Object buffer instead of immediate API call
+	addToLogBuffer(env, logTemplate);
 }
 
 
