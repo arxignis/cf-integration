@@ -44,6 +44,7 @@
     }
   ],
 	"vars": {
+		"ARXIGNIS_API_URL": "https://api.arxignis.com/v1",
 		"ARXIGNIS_API_KEY": "<ARXIGNIS_API_KEY>",
 		"TURNSTILE_SITE_KEY": "<TURNSTILE_SITE_KEY>",
 		"TURNSTILE_SECRET_KEY": "<TURNSTILE_SECRET_KEY>",

@@ -56,20 +56,38 @@ const handler = {
 
 			switch (decision) {
 				case 'block':
+					try {
+					metrics(request, env, {
+						decision,
+						cached: decisionCached || false,
+						ruleId: remediationResult.ruleId || '',
+					});
 					if (env.MODE != 'block') {
 						return fetch(request);
 					}
-					metrics(request, env, { decision, cached: decisionCached || false, score: remediationResult.score || 0 });
 					console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
-					const assetResponse = await env.ASSETS.fetch(new URL('block.html', request.url));
-					return assetResponse;
+						const assetResponse = await env.ASSETS.fetch(new URL('block.html', request.url));
+						return assetResponse;
+					} catch (error) {
+						console.warn('Something went wrong with the block:', error);
+						return fetch(request);
+					}
 				case 'captcha':
+					try {
+					metrics(request, env, {
+						decision,
+						cached: decisionCached || false,
+						ruleId: remediationResult.ruleId || '',
+					});
 					if (env.MODE != 'block') {
 						return fetch(request);
 					}
-					metrics(request, env, { decision, cached: decisionCached || false, score: remediationResult.score || 0 });
 					console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
 					return captcha(request, env);
+					} catch (error) {
+						console.warn('Something went wrong with the captcha:', error);
+						return fetch(request);
+					}
 				default:
 					log(request, env);
 					console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
@@ -89,7 +107,7 @@ export const config: ResolveConfigFn = (env: Env, _trigger) => {
 
 	try {
 		// More explicit check for enabled metrics
-		if (env.PERFORMANCE_METRICS === 'true' && env.PROMETHEUS_URL) {
+		if (env.PERFORMANCE_METRICS && env.PROMETHEUS_URL) {
 			console.log('Enabling OpenTelemetry export to:', env.PROMETHEUS_URL);
 			return {
         exporter: {

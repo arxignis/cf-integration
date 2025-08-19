@@ -3,6 +3,7 @@ import { LogTemplate } from "./types";
 import version from "./version";
 
 export function log(request: Request, env: Env) {
+	try {
 	// Extract request body if present
 	let requestBody: object | string | null = null;
 	if (request.body) {
@@ -46,6 +47,9 @@ export function log(request: Request, env: Env) {
 
 	// Add to Durable Object buffer instead of immediate API call
 	addToLogBuffer(env, logTemplate);
+	} catch (error) {
+		console.warn('Failed to send log:', error);
+	}
 }
 
 
