@@ -201,13 +201,17 @@ else
     echo -e "${YELLOW}1. Which mode do you want to use?${NC}"
     echo -e "   - monitor: Only monitor traffic without blocking"
     echo -e "   - block: Monitor and block malicious traffic"
-    read -p "Enter mode (default: block): " mode
-    mode=${mode:-block}
+    read -p "Enter mode (default: monitor): " mode
+    mode=${mode:-monitor}
 fi
 
 if [[ "$mode" != "monitor" && "$mode" != "block" ]]; then
     echo -e "${RED}Invalid mode. Using default: block${NC}"
     mode="block"
+fi
+
+if [[ "$mode" == "monitor" ]]; then
+    echo -e "${BLUE}Note: In monitor mode, the proxy will only monitor traffic and not block malicious traffic.${NC}"
 fi
 
 save_answer "mode" "$mode"

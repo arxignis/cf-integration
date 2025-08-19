@@ -5,7 +5,7 @@ import { LogTemplate } from './types';
 import { log } from './log';
 import version from './version';
 
-export async function remediation(request: Request, env: Env): Promise<{ decision: string | null; cached?: boolean; score?: number }> {
+export async function remediation(request: Request, env: Env): Promise<{ decision: string | null; cached?: boolean; ruleId?: string }> {
 
 	try {
 		const clientIP = request.headers.get('CF-Connecting-IP');
@@ -28,7 +28,7 @@ export async function remediation(request: Request, env: Env): Promise<{ decisio
 					await cacheManager.delete(clientIP);
 				} else {
 					console.log('Using cached remediation action:', data.action);
-					return { decision: data.action, cached: true, score: data.score };
+					return { decision: data.action, cached: true, ruleId: data.ruleId };
 				}
 			} catch (error) {
 				console.error('Failed to parse cached data:', error);
@@ -111,7 +111,7 @@ export async function remediation(request: Request, env: Env): Promise<{ decisio
 				// Store in both L1 and L2 caches
 				await cacheManager.set(clientIP, JSON.stringify(data.remediation), ttl);
 
-				return { decision: action, cached: true, score: data.remediation.score };
+				return { decision: action, cached: true, ruleId: data.remediation.ruleId };
 			}
 		}
 

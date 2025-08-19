@@ -1,7 +1,7 @@
 export interface RemediationResult {
 	decision: string;
 	cached: boolean;
-	score: number;
+	ruleId: string;
 }
 
 export interface MetricsTemplate {
@@ -10,14 +10,14 @@ export interface MetricsTemplate {
 	hostName: string;
 	remediation: string;
 	cached: boolean;
-	score: number;
+	ruleId: string;
 }
 
 export type RemediationResponse = {
 	success: boolean;
 	remediation: {
 		action: string;
-		score: number;
+		ruleId: string;
 		expired: number;
 		ip: string;
 	};
@@ -25,7 +25,7 @@ export type RemediationResponse = {
 
 export type RemediationCache = {
 	action: string;
-	score: number;
+	ruleId: string;
 	expired: number;
 	ip: string;
 };
