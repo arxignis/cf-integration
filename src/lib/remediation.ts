@@ -83,7 +83,7 @@ export async function remediation(request: Request, env: Env): Promise<{ decisio
 		// Log the request with body data
 		log(request, env);
 
-		const data = await makeApiRequestAsync<RemediationResponse>(env, `remediation`, 'POST', logTemplate, env.ARXIGNIS_API_KEY);
+		const data = await makeApiRequestAsync<RemediationResponse>(env, `remediation/${clientIP}`, 'POST', logTemplate, env.ARXIGNIS_API_KEY);
 		if (!data) {
 			console.error(`Failed to get remediation data for IP: ${clientIP}`);
 			return { decision: null };
