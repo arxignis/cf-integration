@@ -29,11 +29,11 @@
     "bindings": [
       {
         "name": "LOG_BUFFER",
-        "class_name": "ArxignisLogBufferDO",
+        "class_name": "ArxignisLogBufferDO"
       },
       {
         "name": "METRICS_BUFFER",
-        "class_name": "ArxignisMetricsBufferDO",
+        "class_name": "ArxignisMetricsBufferDO"
       }
     ]
   },

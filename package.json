@@ -10,11 +10,11 @@
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"@cloudflare/vitest-pool-workers": "^0.8.71",
 		"@types/node": "^24.0.10",
 		"typescript": "^5.5.2",
 		"vitest": "~3.2.0",
-		"wrangler": "^4.29.1"
+		"wrangler": "^4.35.0"
 	},
 	"dependencies": {
 		"@microlabs/otel-cf-workers": "1.0.0-rc.52",
