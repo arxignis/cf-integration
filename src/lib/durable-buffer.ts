@@ -1,4 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
+
+// Type definitions for function parameters
+type Env = any;
+type DurableObjectState = any;
+type DurableObjectStorage = any;
+type DurableObjectId = any;
+type DurableObjectStub = any;
+
 export interface BufferItem {
   data: any;
   timestamp: number;
@@ -190,7 +198,7 @@ abstract class BaseBufferDO extends DurableObject {
 }
 
 // Durable Object specifically for logs
-class LogBufferDO extends BaseBufferDO {
+class ArxignisLogBufferDO extends BaseBufferDO {
   protected readonly FLUSH_INTERVAL = 5000; // 5 seconds - logs can be batched more frequently
   protected readonly MAX_RETRIES = 2; // Logs are less critical, fewer retries
   protected readonly MAX_BUFFER_SIZE = 2000; // Larger buffer for logs
@@ -256,7 +264,7 @@ class LogBufferDO extends BaseBufferDO {
 }
 
 // Durable Object specifically for metrics
-class MetricsBufferDO extends BaseBufferDO {
+class ArxignisMetricsBufferDO extends BaseBufferDO {
   protected readonly FLUSH_INTERVAL = 10000; // 10 seconds - metrics can wait longer
   protected readonly MAX_RETRIES = 5; // Metrics are more critical, more retries
   protected readonly MAX_BUFFER_SIZE = 1000; // Smaller buffer for metrics
@@ -409,8 +417,4 @@ export async function getMetricsBufferStatus(env: Env): Promise<any> {
 }
 
 // Export the base classes
-export { LogBufferDO, MetricsBufferDO };
-
-// Export instrumented versions
-
-
+export { ArxignisLogBufferDO, ArxignisMetricsBufferDO };

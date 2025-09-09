@@ -1,11 +1,11 @@
 import { remediation } from './lib/remediation';
 import { captcha } from './lib/captcha';
-import { instrument, instrumentDO, ResolveConfigFn } from '@microlabs/otel-cf-workers';
+import { instrument, ResolveConfigFn } from '@microlabs/otel-cf-workers';
 import { trace } from '@opentelemetry/api';
 import { getIPType } from './lib/helper';
 import { log } from './lib/log';
 import { metrics } from './lib/metrics';
-import { getLogBufferStatus, getMetricsBufferStatus, LogBufferDO, MetricsBufferDO } from './lib/durable-buffer';
+import { getLogBufferStatus, getMetricsBufferStatus, ArxignisLogBufferDO, ArxignisMetricsBufferDO } from './lib/durable-buffer';
 import version from './lib/version';
 
 
@@ -139,4 +139,4 @@ export const config: ResolveConfigFn = (env: Env, _trigger) => {
 export default instrument(handler, config);
 
 // Export Durable Object classes for Wrangler
-export { LogBufferDO, MetricsBufferDO };
+export { ArxignisLogBufferDO, ArxignisMetricsBufferDO };

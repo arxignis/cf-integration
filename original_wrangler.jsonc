@@ -40,7 +40,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["ArxignisLogBufferDO", "ArxignisMetricsBufferDO"]
+      "new_sqlite_classes": ["ArxignisLogBufferDO", "ArxignisMetricsBufferDO"]
     }
   ],
 	"vars": {
