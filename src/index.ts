@@ -7,97 +7,122 @@ import { log } from './lib/log';
 import { metrics } from './lib/metrics';
 import { getLogBufferStatus, getMetricsBufferStatus, ArxignisLogBufferDO, ArxignisMetricsBufferDO } from './lib/durable-buffer';
 import version from './lib/version';
+import { RemediationResult } from './lib/types';
 
+interface ArxignisEnv extends Omit<Env, 'MODE'> {
+	MODE: 'block' | 'monitor';
+}
 
 const handler = {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		try {
-			const clientIP = request.headers.get('CF-Connecting-IP') || '';
+  async fetch(
+    request: Request,
+    env: ArxignisEnv,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    try {
+      const clientIP = request.headers.get('CF-Connecting-IP') || '';
 
-			const remediationResult = await remediation(request, env);
-			const decision = remediationResult.decision;
-			const decisionCached = remediationResult.cached;
+      const remediationResult = await remediation(request, env as Env);
+      const decision = remediationResult.decision;
+      const decisionCached = remediationResult.cached;
 
-			// Set span attributes for tracing (with error handling)
-			try {
-				const span = trace.getActiveSpan();
-				if (span) {
-					span.setAttribute('origin_url', request.url);
-					span.setAttribute('client.ip', clientIP);
-					span.setAttribute('client.ip_type', getIPType(clientIP));
-					span.setAttribute('remediation.decision', decision || 'none');
-					span.setAttribute('remediation.cached', decisionCached ? 'true' : 'false');
-					span.setAttribute('timestamp', new Date().toISOString());
-					span.setAttribute('ax.version', version);
-				}
-			} catch (error) {
-				console.warn('Failed to set tracing attributes:', error);
-			}
+      // Set span attributes for tracing (with error handling)
+      try {
+        const span = trace.getActiveSpan();
+        if (span) {
+          span.setAttribute('origin_url', request.url);
+          span.setAttribute('client.ip', clientIP);
+          span.setAttribute('client.ip_type', getIPType(clientIP));
+          span.setAttribute('remediation.decision', decision || 'none');
+          span.setAttribute(
+            'remediation.cached',
+            decisionCached ? 'true' : 'false'
+          );
+          span.setAttribute('timestamp', new Date().toISOString());
+          span.setAttribute('ax.version', version);
+        }
+      } catch (error) {
+        console.warn('Failed to set tracing attributes:', error);
+      }
 
-			// Add buffer status to span for monitoring (non-blocking)
-			Promise.all([
-				getLogBufferStatus(env),
-				getMetricsBufferStatus(env)
-			]).then(([logStatus, metricsStatus]) => {
-				try {
-					const span = trace.getActiveSpan();
-					if (span) {
-						span.setAttribute('log_buffer.size', logStatus.size);
-						span.setAttribute('log_buffer.is_flushing', logStatus.isFlushing);
-						span.setAttribute('metrics_buffer.size', metricsStatus.size);
-						span.setAttribute('metrics_buffer.is_flushing', metricsStatus.isFlushing);
-					}
-				} catch (error) {
-					console.warn('Failed to set buffer status attributes:', error);
-				}
-			}).catch(() => {
-				// Ignore buffer status errors to avoid blocking request processing
-			});
+      // Add buffer status to span for monitoring (non-blocking)
+      Promise.all([getLogBufferStatus(env), getMetricsBufferStatus(env)])
+        .then(([logStatus, metricsStatus]) => {
+          try {
+            const span = trace.getActiveSpan();
+            if (span) {
+              span.setAttribute('log_buffer.size', logStatus.size);
+              span.setAttribute('log_buffer.is_flushing', logStatus.isFlushing);
+              span.setAttribute('metrics_buffer.size', metricsStatus.size);
+              span.setAttribute(
+                'metrics_buffer.is_flushing',
+                metricsStatus.isFlushing
+              );
+            }
+          } catch (error) {
+            console.warn('Failed to set buffer status attributes:', error);
+          }
+        })
+        .catch(() => {
+          // Ignore buffer status errors to avoid blocking request processing
+        });
 
-			switch (decision) {
-				case 'block':
-					try {
-					metrics(request, env, {
-						decision,
-						cached: decisionCached || false,
-						ruleId: remediationResult.ruleId || '',
-					});
-					if (env.MODE != 'block') {
-						return fetch(request);
-					}
-					console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
-						const assetResponse = await env.ASSETS.fetch(new URL('block.html', request.url));
-						return assetResponse;
-					} catch (error) {
-						console.warn('Something went wrong with the block:', error);
-						return fetch(request);
-					}
-				case 'captcha':
-					try {
-					metrics(request, env, {
-						decision,
-						cached: decisionCached || false,
-						ruleId: remediationResult.ruleId || '',
-					});
-					if (env.MODE != 'block') {
-						return fetch(request);
-					}
-					console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
-					return captcha(request, env);
-					} catch (error) {
-						console.warn('Something went wrong with the captcha:', error);
-						return fetch(request);
-					}
-				default:
-					log(request, env);
-					console.log(JSON.stringify({ ipAddress: clientIP, remediation: decision, remediationCached: decisionCached || false }));
-					return fetch(request);
-			}
-		} catch (error) {
-			console.error('Handler error:', error);
-			return new Response('Internal Server Error', { status: 500 });
-		}
-	},
+      switch (decision) {
+        case 'block':
+          try {
+            if (env.MODE != 'block') {
+              return fetch(request);
+            }
+            metrics(request, env as Env, remediationResult as RemediationResult);
+            console.log(
+              JSON.stringify({
+                ipAddress: clientIP,
+                remediation: decision,
+                remediationCached: decisionCached || false,
+              })
+            );
+            const assetResponse = await env.ASSETS.fetch(
+              new URL('block.html', request.url)
+            );
+            return assetResponse;
+          } catch (error) {
+            console.warn('Something went wrong with the block:', error);
+            return fetch(request);
+          }
+        case 'captcha':
+          try {
+            if (env.MODE != 'block') {
+              return fetch(request);
+            }
+            metrics(request, env as Env, remediationResult as RemediationResult);
+            console.log(
+              JSON.stringify({
+                ipAddress: clientIP,
+                remediation: decision,
+                remediationCached: decisionCached || false,
+              })
+            );
+            return captcha(request, env as Env);
+          } catch (error) {
+            console.warn('Something went wrong with the captcha:', error);
+            return fetch(request);
+          }
+        default:
+          log(request, env as Env);
+          console.log(
+            JSON.stringify({
+              ipAddress: clientIP,
+              remediation: decision,
+              remediationCached: decisionCached || false,
+            })
+          );
+          return fetch(request);
+      }
+    } catch (error) {
+      console.error('Handler error:', error);
+      return new Response('Internal Server Error', { status: 500 });
+    }
+  },
 } satisfies ExportedHandler<Env>;
 
 export const config: ResolveConfigFn = (env: Env, _trigger) => {

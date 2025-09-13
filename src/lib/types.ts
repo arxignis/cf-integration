@@ -2,6 +2,7 @@ export interface RemediationResult {
 	decision: string;
 	cached: boolean;
 	ruleId: string;
+	action: string;
 }
 
 export interface MetricsTemplate {
@@ -9,7 +10,6 @@ export interface MetricsTemplate {
 	clientIp: string;
 	hostName: string;
 	remediation: string;
-	cached: boolean;
 	ruleId: string;
 }
 
