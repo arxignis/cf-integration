@@ -330,27 +330,49 @@ class ArxignisMetricsBufferDO extends BaseBufferDO {
 }
 
 // Worker-side helper functions
-export function getLogBufferId(env: any, name: string = "default"): DurableObjectId {
+export function getLogBufferId(env: any, name: string = "default"): DurableObjectId | null {
+  if (!env.LOG_BUFFER) {
+    console.warn('LOG_BUFFER binding not available');
+    return null;
+  }
   return env.LOG_BUFFER.idFromName(name);
 }
 
-export function getMetricsBufferId(env: any, name: string = "default"): DurableObjectId {
+export function getMetricsBufferId(env: any, name: string = "default"): DurableObjectId | null {
+  if (!env.METRICS_BUFFER) {
+    console.warn('METRICS_BUFFER binding not available');
+    return null;
+  }
   return env.METRICS_BUFFER.idFromName(name);
 }
 
-export function getLogBufferStub(env: any, name: string = "default"): DurableObjectStub {
-  const id = getLogBufferId(env);
+export function getLogBufferStub(env: any, name: string = "default"): DurableObjectStub | null {
+  if (!env.LOG_BUFFER) {
+    console.warn('LOG_BUFFER binding not available');
+    return null;
+  }
+  const id = getLogBufferId(env, name);
+  if (!id) return null;
   return env.LOG_BUFFER.get(id);
 }
 
-export function getMetricsBufferStub(env: any, name: string = "default"): DurableObjectStub {
-  const id = getMetricsBufferId(env);
+export function getMetricsBufferStub(env: any, name: string = "default"): DurableObjectStub | null {
+  if (!env.METRICS_BUFFER) {
+    console.warn('METRICS_BUFFER binding not available');
+    return null;
+  }
+  const id = getMetricsBufferId(env, name);
+  if (!id) return null;
   return env.METRICS_BUFFER.get(id);
 }
 
 export async function addToLogBuffer(env: Env, data: any): Promise<void> {
   try {
     const stub = getLogBufferStub(env);
+    if (!stub) {
+      console.warn('📝 ⚠️ Log buffer not available, skipping log entry');
+      return;
+    }
 
     const response = await stub.fetch('https://buffer.local/', {
       method: 'POST',
@@ -368,6 +390,10 @@ export async function addToLogBuffer(env: Env, data: any): Promise<void> {
 export async function addToMetricsBuffer(env: Env, data: any): Promise<void> {
   try {
     const stub = getMetricsBufferStub(env);
+    if (!stub) {
+      console.warn('📊 ⚠️ Metrics buffer not available, skipping metrics entry');
+      return;
+    }
 
     const response = await stub.fetch('https://buffer.local/', {
       method: 'POST',
@@ -385,6 +411,11 @@ export async function addToMetricsBuffer(env: Env, data: any): Promise<void> {
 export async function getLogBufferStatus(env: Env): Promise<any> {
   try {
     const stub = getLogBufferStub(env);
+    if (!stub) {
+      console.warn('📝 ⚠️ Log buffer not available, returning fallback status');
+      return { size: 0, count: 0, isFlushing: false, type: 'log' };
+    }
+
     const response = await stub.fetch('https://buffer.local/');
 
     if (response.ok) {
@@ -402,6 +433,11 @@ export async function getLogBufferStatus(env: Env): Promise<any> {
 export async function getMetricsBufferStatus(env: Env): Promise<any> {
   try {
     const stub = getMetricsBufferStub(env);
+    if (!stub) {
+      console.warn('📊 ⚠️ Metrics buffer not available, returning fallback status');
+      return { size: 0, count: 0, isFlushing: false, type: 'metrics' };
+    }
+
     const response = await stub.fetch('https://buffer.local/');
 
     if (response.ok) {

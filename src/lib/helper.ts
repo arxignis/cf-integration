@@ -138,7 +138,7 @@ export async function makeApiRequestAsync<T = any>(
   apiKey?: string
 ): Promise<T | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for better performance
   const startTime = Date.now();
 	const apiUrl = env.ARXIGNIS_API_URL || apiGlobalUrl;
 
@@ -164,14 +164,14 @@ export async function makeApiRequestAsync<T = any>(
     if (response.status !== 200) {
       const errorText = await response.text();
       console.error(
-        `API request failed with status ${
-          response.status
-        }: ${errorText}`
+        `API request failed with status ${response.status}: ${errorText}`
       );
 
       // Handle specific error cases
       if (errorText.includes('Internal IP addresses are not allowed')) {
-        console.warn('Internal IP rejected by API - this is expected in development environment');
+        console.warn(
+          'Internal IP rejected by API - this is expected in development environment'
+        );
         // Return a special error object instead of null to distinguish this case
         return { error: 'internal_ip_rejected', message: errorText } as any;
       }
