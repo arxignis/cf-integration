@@ -87,3 +87,31 @@ export interface ThreatResponse {
 	ttl_s: number;
 	generated_at: string;
 }
+
+export interface AccessRuleAllowBlock {
+	country: string[];
+	asn: string[];
+	ips: string[];
+}
+
+export interface AccessRule {
+	id: string;
+	name: string;
+	description: string;
+	allow: AccessRuleAllowBlock;
+	block: AccessRuleAllowBlock;
+	is_active: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface AccessRuleResponse {
+	success: boolean;
+	data: AccessRule;
+}
+
+export interface AccessRuleResult {
+	decision: string | null; // 'allow', 'block', or null
+	cached?: boolean;
+	ruleId?: string;
+}

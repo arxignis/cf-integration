@@ -1,7 +1,6 @@
 import { makeApiRequestAsync } from './helper';
 import { CacheManager } from './cache';
 import { ThreatResponse } from './types';
-import { log } from './log';
 
 export async function threat(request: Request, env: Env, ctx: ExecutionContext): Promise<{ decision: string | null; cached?: boolean; ruleId?: string }> {
 
@@ -47,7 +46,6 @@ export async function threat(request: Request, env: Env, ctx: ExecutionContext):
 			return { decision: null };
 		}
 
-		// Check if the remediation action is for the current IP
 		if (response.ip === clientIP) {
 			const action = response.advice;
 			if (action && ['block', 'captcha', 'allow'].includes(action)) {
@@ -60,7 +58,6 @@ export async function threat(request: Request, env: Env, ctx: ExecutionContext):
 					ttl = 60;
 				}
 
-				// Store in both L1 and L2 caches
 				await cacheManager.set(clientIP, JSON.stringify(response), ttl);
 
 				return { decision: action, cached: true, ruleId: response.intel?.rule_id };

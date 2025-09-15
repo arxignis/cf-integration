@@ -6,8 +6,9 @@ import { log } from './lib/log';
 import { metrics } from './lib/metrics';
 import { getLogBufferStatus, getMetricsBufferStatus, ArxignisLogBufferDO, ArxignisMetricsBufferDO } from './lib/durable-buffer';
 import version from './lib/version';
-import { ThreatResult } from './lib/types';
+import { ThreatResult, AccessRuleResult } from './lib/types';
 import { threat } from './lib/threat';
+import { accessRules } from './lib/access-rules';
 interface ArxignisEnv extends Omit<Env, 'MODE'> {
 	MODE: 'block' | 'monitor';
 }
@@ -32,20 +33,47 @@ const handler = {
       try {
         const clientIP = request.headers.get('CF-Connecting-IP') || '';
 
-        const threatResult = await threat(request, env as Env, ctx);
-        const decision = threatResult.decision === 'challenge' ? 'captcha' : threatResult.decision;
-        const decisionCached = threatResult.cached;
+        // Check access rules first (if ruleId is provided)
+        const ruleId = request.headers.get('X-Access-Rule-ID') || env.ARXIGNIS_ACCESS_CONTROL_LIST_ID;
+        let accessRuleResult: AccessRuleResult | null = null;
+
+        if (ruleId) {
+          accessRuleResult = await accessRules(request, env as Env, ctx, ruleId);
+        }
+
+        // Only check threat if access rules don't already decide
+        let threatResult: ThreatResult | null = null;
+        if (!accessRuleResult || !accessRuleResult.decision) {
+          threatResult = await threat(request, env as Env, ctx);
+        }
+
+        // Determine final decision - access rules take precedence
+        let decision: string | null = null;
+        let decisionCached = false;
+        let ruleIdUsed: string | undefined;
+
+        if (accessRuleResult && accessRuleResult.decision) {
+          decision = accessRuleResult.decision;
+          decisionCached = accessRuleResult.cached || false;
+          ruleIdUsed = accessRuleResult.ruleId;
+        } else if (threatResult) {
+          decision = threatResult.decision === 'challenge' ? 'captcha' : threatResult.decision;
+          decisionCached = threatResult.cached || false;
+          ruleIdUsed = threatResult.ruleId;
+        }
 
         // Set span attributes for tracing
         try {
           span.setAttribute('origin_url', request.url);
           span.setAttribute('client.ip', clientIP);
           span.setAttribute('client.ip_type', getIPType(clientIP));
-          span.setAttribute('remediation.decision', decision || 'none');
+          span.setAttribute('decision', decision || 'none');
           span.setAttribute(
-            'remediation.cached',
+            'decision_cached',
             decisionCached ? 'true' : 'false'
           );
+          span.setAttribute('rule_id', ruleIdUsed || 'none');
+          span.setAttribute('source', accessRuleResult ? 'access_rule' : 'threat');
           span.setAttribute('timestamp', new Date().toISOString());
           span.setAttribute('ax.version', version);
         } catch (error) {
@@ -82,12 +110,17 @@ const handler = {
               if (env.MODE != 'block') {
                 response = await fetch(request);
               } else {
-                metrics(request, env as Env, threatResult as ThreatResult);
+                // Use the appropriate result for metrics
+                const resultForMetrics = accessRuleResult || threatResult;
+                if (resultForMetrics) {
+                  metrics(request, env as Env, resultForMetrics as ThreatResult);
+                }
                 console.log(
                   JSON.stringify({
                     ipAddress: clientIP,
-                    threat: decision,
-                    threatCached: decisionCached || false,
+                    decision: decision,
+                    decisionCached: decisionCached || false,
+                    ruleId: ruleIdUsed
                   })
                 );
                 response = await env.ASSETS.fetch(
@@ -107,12 +140,17 @@ const handler = {
               if (env.MODE != 'block') {
                 response = await fetch(request);
               } else {
-                metrics(request, env as Env, threatResult as ThreatResult);
+                // Use the appropriate result for metrics
+                const resultForMetrics = accessRuleResult || threatResult;
+                if (resultForMetrics) {
+                  metrics(request, env as Env, resultForMetrics as ThreatResult);
+                }
                 console.log(
                   JSON.stringify({
                     ipAddress: clientIP,
-                    threat: decision,
-                    threatCached: decisionCached || false,
+                    decision: decision,
+                    decisionCached: decisionCached || false,
+                    ruleId: ruleIdUsed
                   })
                 );
                 response = await captcha(request, env as Env);
@@ -129,8 +167,9 @@ const handler = {
             console.log(
               JSON.stringify({
                 ipAddress: clientIP,
-                remediation: decision,
-                remediationCached: decisionCached || false,
+                decision: decision,
+                decisionCached: decisionCached || false,
+                ruleId: ruleIdUsed
               })
             );
             response = await fetch(request);
