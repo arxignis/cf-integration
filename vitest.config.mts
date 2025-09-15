@@ -7,5 +7,20 @@ export default defineWorkersConfig({
 				wrangler: { configPath: './wrangler.jsonc' },
 			},
 		},
+		setupFiles: ['./src/__tests__/setup.ts'],
+		environment: 'node',
+		globals: true,
+		coverage: {
+			provider: 'v8',
+			reporter: ['text', 'json', 'html'],
+			exclude: [
+				'node_modules/',
+				'src/__tests__/',
+				'**/*.test.ts',
+				'**/*.test.js',
+				'**/*.config.*',
+				'**/setup.ts'
+			]
+		}
 	},
 });
