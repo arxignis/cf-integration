@@ -34,7 +34,7 @@ const handler = {
         const clientIP = request.headers.get('CF-Connecting-IP') || '';
 
         // Check access rules first (if ruleId is provided)
-        const ruleId = request.headers.get('X-Access-Rule-ID') || env.ARXIGNIS_ACCESS_CONTROL_LIST_ID;
+        const ruleId = env.ARXIGNIS_ACCESS_RULE_LIST_ID;
         let accessRuleResult: AccessRuleResult | null = null;
 
         if (ruleId) {

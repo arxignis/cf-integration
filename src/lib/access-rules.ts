@@ -61,7 +61,7 @@ export async function accessRules(
 			await cacheManager.set(
         ruleCacheKey,
         JSON.stringify(accessRule),
-        parseInt(env.ARXIGNIS_ACCESS_CONTROL_LIST_CACHE_TTL) || 300
+        parseInt(env.ARXIGNIS_ACCESS_RULE_LIST_CACHE_TTL) || 300
       );
 		}
 
