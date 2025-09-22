@@ -18,8 +18,8 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0
       cacheable:
-        specifier: ^2.0.1
-        version: 2.0.1
+        specifier: ^2.0.2
+        version: 2.0.2
       cloudflare:
         specifier: ^5.1.0
         version: 5.1.0
@@ -51,14 +51,14 @@ importers:
 
 packages:
 
-  '@cacheable/memoize@2.0.1':
-    resolution: {integrity: sha512-WBLH37SynkCa39S6IrTSMQF3Wdv4/51WxuU5TuCNEqZcLgLGHme8NUxRTcDIO8ZZFXlslWbh9BD3DllixgPg6Q==}
+  '@cacheable/memoize@2.0.2':
+    resolution: {integrity: sha512-wPrr7FUiq3Qt4yQyda2/NcOLTJCFcQSU3Am2adP+WLy+sz93/fKTokVTHmtz+rjp4PD7ee0AEOeRVNN6IvIfsg==}
 
-  '@cacheable/memory@2.0.1':
-    resolution: {integrity: sha512-Ufc7iQnRKFC8gjZVGOTOsMwM/vZtmsw3LafvctVXPm835ElgK3DpMe1U5i9sd6OieSkyJhXbAT2Q2FosXBBbAQ==}
+  '@cacheable/memory@2.0.2':
+    resolution: {integrity: sha512-sJTITLfeCI1rg7P3ssaGmQryq235EGT8dXGcx6oZwX5NRnKq9IE6lddlllcOl+oXW+yaeTRddCjo0xrfU6ZySA==}
 
-  '@cacheable/utils@2.0.1':
-    resolution: {integrity: sha512-sxHjO6wKn4/0wHCFYbh6tljj+ciP9BKgyBi09NLsor3sN+nu/Rt3FwLw6bYp7bp8usHpmcwUozrB/u4RuSw/eg==}
+  '@cacheable/utils@2.0.2':
+    resolution: {integrity: sha512-JTFM3raFhVv8LH95T7YnZbf2YoE9wEtkPPStuRF9a6ExZ103hFvs+QyCuYJ6r0hA9wRtbzgZtwUCoDWxssZd4Q==}
 
   '@cloudflare/kv-asset-handler@0.4.0':
     resolution: {integrity: sha512-+tv3z+SPp+gqTIcImN9o0hqE9xyfQjI1XD9pL6NuKjua9B1y7mNYv0S9cP+QEbA4ppVgGZEmKOvHX5G5Ei1CVA==}
@@ -538,9 +538,9 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@keyv/bigmap@1.0.1':
-    resolution: {integrity: sha512-dZ7TMshK6brpuGPPRoq4pHNzNH4KTWaxVPB7KEnPErlgJpc+jG1Oyx3sw6nBFiZ0OCKwC1zU6skMEG7H421f9g==}
-    engines: {node: '>= 20'}
+  '@keyv/bigmap@1.0.2':
+    resolution: {integrity: sha512-KR03xkEZlAZNF4IxXgVXb+uNIVNvwdh8UwI0cnc7WI6a+aQcDp8GL80qVfeB4E5NpsKJzou5jU0r6yLSSbMOtA==}
+    engines: {node: '>= 18'}
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
@@ -858,8 +858,8 @@ packages:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
     engines: {node: '>=8'}
 
-  cacheable@2.0.1:
-    resolution: {integrity: sha512-MSKxcybpxB5kcWKpj+1tPBm2os4qKKGxDovsZmLhZmWIDYp8EgtC45C5zk1fLe1IC9PpI4ZE4eyryQH0N10PKA==}
+  cacheable@2.0.2:
+    resolution: {integrity: sha512-dWjhLx8RWnPsAWVKwW/wI6OJpQ/hSVb1qS0NUif8TR9vRiSwci7Gey8x04kRU9iAF+Rnbtex5Kjjfg/aB5w8Pg==}
 
   call-bind-apply-helpers@1.0.2:
     resolution: {integrity: sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==}
@@ -1368,19 +1368,19 @@ packages:
 
 snapshots:
 
-  '@cacheable/memoize@2.0.1':
+  '@cacheable/memoize@2.0.2':
     dependencies:
-      '@cacheable/utils': 2.0.1
+      '@cacheable/utils': 2.0.2
 
-  '@cacheable/memory@2.0.1':
+  '@cacheable/memory@2.0.2':
     dependencies:
-      '@cacheable/memoize': 2.0.1
-      '@cacheable/utils': 2.0.1
-      '@keyv/bigmap': 1.0.1
+      '@cacheable/memoize': 2.0.2
+      '@cacheable/utils': 2.0.2
+      '@keyv/bigmap': 1.0.2
       hookified: 1.12.1
       keyv: 5.5.2
 
-  '@cacheable/utils@2.0.1': {}
+  '@cacheable/utils@2.0.2': {}
 
   '@cloudflare/kv-asset-handler@0.4.0':
     dependencies:
@@ -1670,7 +1670,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@keyv/bigmap@1.0.1':
+  '@keyv/bigmap@1.0.2':
     dependencies:
       hookified: 1.12.1
 
@@ -1956,11 +1956,11 @@ snapshots:
 
   cac@6.7.14: {}
 
-  cacheable@2.0.1:
+  cacheable@2.0.2:
     dependencies:
-      '@cacheable/memoize': 2.0.1
-      '@cacheable/memory': 2.0.1
-      '@cacheable/utils': 2.0.1
+      '@cacheable/memoize': 2.0.2
+      '@cacheable/memory': 2.0.2
+      '@cacheable/utils': 2.0.2
       hookified: 1.12.1
       keyv: 5.5.2
 
