@@ -9,6 +9,7 @@ export interface ThreatResult {
 	decision: string | null; // maps to advice from Threat type
 	cached?: boolean;
 	ruleId?: string;
+	response?: ThreatResponse | null;
 }
 
 export interface MetricsTemplate {
@@ -114,4 +115,46 @@ export interface AccessRuleResult {
 	decision: string | null; // 'allow', 'block', or null
 	cached?: boolean;
 	ruleId?: string;
+}
+
+export interface FilterAdditionalData {
+	remediation?: string | null;
+	threat_score?: number | null;
+	threat_rule?: string | null;
+	mode?: string | null;
+	[key: string]: unknown;
+}
+
+export interface FilterHttpSection {
+	method?: string | null;
+	path?: string | null;
+	query?: string | null;
+	query_hash?: string | null;
+	host?: string | null;
+	scheme?: string | null;
+	port?: number | null;
+	remote_ip?: string | null;
+	user_agent?: string | null;
+	content_type?: string | null;
+	content_length?: number | null;
+	headers: Record<string, string | string[]>;
+	body?: string;
+	body_sha256?: string | null;
+}
+
+export interface FilterEvent {
+	event_type: string;
+	schema_version: string;
+	timestamp: string;
+	request_id?: string | null;
+	tenant_id?: string | null;
+	additional?: FilterAdditionalData | Record<string, unknown>;
+	http: FilterHttpSection;
+}
+
+export interface FilterApiResponse {
+	status: number;
+	headers: Record<string, string>;
+	body: string;
+	json?: any;
 }

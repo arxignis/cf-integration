@@ -9,6 +9,7 @@ import version from './lib/version';
 import { ThreatResult, AccessRuleResult } from './lib/types';
 import { threat } from './lib/threat';
 import { accessRules } from './lib/access-rules';
+import { buildFilterEvent, generateIdempotencyKey, sendFilterRequest } from './lib/filter';
 interface ArxignisEnv extends Omit<Env, 'MODE'> {
 	MODE: 'block' | 'monitor';
 }
@@ -66,7 +67,15 @@ const handler = {
         try {
           span.setAttribute('origin_url', request.url);
           span.setAttribute('client.ip', clientIP);
-          span.setAttribute('client.ip_type', getIPType(clientIP));
+          if (clientIP) {
+            try {
+              span.setAttribute('client.ip_type', getIPType(clientIP));
+            } catch (error) {
+              span.setAttribute('client.ip_type', 'unknown');
+            }
+          } else {
+            span.setAttribute('client.ip_type', 'none');
+          }
           span.setAttribute('decision', decision || 'none');
           span.setAttribute(
             'decision_cached',
@@ -172,7 +181,53 @@ const handler = {
                 ruleId: ruleIdUsed
               })
             );
-            response = await fetch(request);
+            
+            // Call filter service if configured
+            let filterAction: string | null = null;
+            if (env.ARXIGNIS_API_URL && env.ARXIGNIS_API_KEY && env.ARXIGNIS_TENANT_ID) {
+              try {
+                const filterEvent = await buildFilterEvent(request, {
+                  requestId: request.headers.get('CF-Request-ID') || undefined,
+                  tenantId: env.ARXIGNIS_TENANT_ID,
+                });
+                
+                const idempotencyKey = await generateIdempotencyKey(request);
+                const filterResult = await sendFilterRequest(env as Env, filterEvent, {
+                  idempotencyKey,
+                  originalEvent: false,
+                });
+                
+                if (filterResult.error) {
+                  console.warn('Filter request error:', filterResult.error);
+                } else if (filterResult.response?.json) {
+                  filterAction = filterResult.response.json.action || null;
+                  span.setAttribute('filter.action', filterAction || 'none');
+                  span.setAttribute('filter.reason', filterResult.response.json.reason || 'none');
+                  if (filterResult.response.json.details) {
+                    span.setAttribute('filter.files_scanned', filterResult.response.json.details.files_scanned || 0);
+                    span.setAttribute('filter.files_infected', filterResult.response.json.details.files_infected || 0);
+                  }
+                  
+                  console.log('Filter result:', JSON.stringify({
+                    action: filterAction,
+                    reason: filterResult.response.json.reason,
+                    details: filterResult.response.json.details
+                  }));
+                }
+              } catch (error) {
+                console.warn('Filter processing failed:', error);
+                span.recordException(error as Error);
+              }
+            }
+            
+            // If filter returned block, return block page
+            if (filterAction === 'block' && env.MODE === 'block') {
+              console.log('Blocked by filter service');
+              response = await env.ASSETS.fetch(new URL('block.html', request.url));
+            } else {
+              // Proxy to origin if allowed or filter not configured
+              response = await fetch(request);
+            }
         }
 
         // Set response attributes
