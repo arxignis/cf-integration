@@ -1,7 +1,12 @@
 import jwt from '@tsndr/cloudflare-worker-jwt';
 import { parse } from 'cookie';
 
-export const captcha = async (request: Request, env: Env) => {
+export interface CaptchaResult {
+  solved: boolean;
+  response?: Response;
+}
+
+export const captcha = async (request: Request, env: Env): Promise<CaptchaResult> => {
   const siteKey = env.TURNSTILE_SITE_KEY;
   const secretKey = env.TURNSTILE_SECRET_KEY;
   const ip = request.headers.get('CF-Connecting-IP');
@@ -11,11 +16,7 @@ export const captcha = async (request: Request, env: Env) => {
     try {
       const isValid = await jwt.verify(cookie['ax_captcha'], secretKey + ip);
       if (isValid) {
-        return new Response(request.body, {
-          status: 200,
-          statusText: 'OK',
-          headers: request.headers,
-        });
+        return { solved: true };
       }
     } catch (err) {
       console.log(err);
@@ -24,7 +25,8 @@ export const captcha = async (request: Request, env: Env) => {
   }
 
   if (request.method === 'POST') {
-    return handlePost(request, env);
+    const postResponse = await handlePost(request, env);
+    return { solved: false, response: postResponse };
   }
 
   const captchaResponse = await env.ASSETS.fetch(
@@ -37,12 +39,15 @@ export const captcha = async (request: Request, env: Env) => {
     .replace(/\${siteKey}/g, siteKey)
     .replace(/\${requestUrl}/g, request.url);
 
-  return new Response(processedHTML, {
-    headers: {
-      'content-type': 'text/html;charset=UTF-8',
-    },
-    status: 200,
-  });
+  return {
+    solved: false,
+    response: new Response(processedHTML, {
+      headers: {
+        'content-type': 'text/html;charset=UTF-8',
+      },
+      status: 200,
+    }),
+  };
 };
 
 interface TurnstileResponse {

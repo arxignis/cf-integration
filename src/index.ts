@@ -148,29 +148,35 @@ const handler = {
             try {
               if (env.MODE != 'block') {
                 response = await fetch(request);
-              } else {
-                // Use the appropriate result for metrics
-                const resultForMetrics = accessRuleResult || threatResult;
-                if (resultForMetrics) {
-                  metrics(request, env as Env, resultForMetrics as ThreatResult);
-                }
-                console.log(
-                  JSON.stringify({
-                    ipAddress: clientIP,
-                    decision: decision,
-                    decisionCached: decisionCached || false,
-                    ruleId: ruleIdUsed
-                  })
-                );
-                response = await captcha(request, env as Env);
+                break;
               }
+              // Use the appropriate result for metrics
+              const resultForMetrics = accessRuleResult || threatResult;
+              if (resultForMetrics) {
+                metrics(request, env as Env, resultForMetrics as ThreatResult);
+              }
+              console.log(
+                JSON.stringify({
+                  ipAddress: clientIP,
+                  decision: decision,
+                  decisionCached: decisionCached || false,
+                  ruleId: ruleIdUsed
+                })
+              );
+              const captchaResult = await captcha(request, env as Env);
+              if (!captchaResult.solved) {
+                response = captchaResult.response ?? await fetch(request);
+                break;
+              }
+              decision = 'allow';
+              // fall through to default for filter processing
             } catch (error) {
               console.warn('Something went wrong with the captcha:', error);
               span.recordException(error as Error);
               span.setStatus({ code: SpanStatusCode.ERROR, message: 'Captcha processing failed' });
               response = await fetch(request);
+              break;
             }
-            break;
           default:
             log(request, env as Env);
             console.log(
