@@ -9,7 +9,7 @@ import version from './lib/version';
 import { ThreatResult, AccessRuleResult } from './lib/types';
 import { threat } from './lib/threat';
 import { accessRules } from './lib/access-rules';
-import { buildFilterEvent, generateIdempotencyKey, sendFilterRequest } from './lib/filter';
+import { buildFilterEvent, buildScanRequestFromEvent, generateIdempotencyKey, sendFilterRequest, sendScanRequest } from './lib/filter';
 interface ArxignisEnv extends Omit<Env, 'MODE'> {
 	MODE: 'block' | 'monitor';
 }
@@ -177,46 +177,73 @@ const handler = {
               response = await fetch(request);
               break;
             }
-          default:
+          default: {
             log(request, env as Env);
-            console.log(
-              JSON.stringify({
-                ipAddress: clientIP,
-                decision: decision,
-                decisionCached: decisionCached || false,
-                ruleId: ruleIdUsed
-              })
-            );
-            
-            // Call filter service if configured
+            console.log(JSON.stringify({
+              ipAddress: clientIP,
+              decision: decision,
+              decisionCached: decisionCached || false,
+              ruleId: ruleIdUsed
+            }));
+
+            const respondWithBlock = async (reason: string, source: string): Promise<Response> => {
+              console.warn('Arxignis blocking request', { reason, source });
+              span.setAttribute('arxignis.block.reason', reason);
+              span.setAttribute('arxignis.block.source', source);
+
+              if (env.MODE === 'block') {
+                span.setAttribute('arxignis.block.mode', 'enforce');
+                if (env.ASSETS) {
+                  return env.ASSETS.fetch(new URL('block.html', request.url));
+                }
+                return new Response('Request blocked by Arxignis', { status: 403 });
+              }
+
+              span.setAttribute('arxignis.block.mode', 'monitor');
+              return fetch(request);
+            };
+
             let filterAction: string | null = null;
+            let filterReason: string | undefined;
+            let filterEvent: FilterEvent | null = null;
+
+            const additional: Record<string, unknown> = {
+              remediation: decision || 'unknown',
+              threat_score: threatResult?.response?.intel?.score ?? undefined,
+              threat_rule: threatResult?.response?.intel?.rule_id ?? ruleIdUsed ?? undefined,
+              mode: env.MODE,
+            };
+
             if (env.ARXIGNIS_API_URL && env.ARXIGNIS_API_KEY && env.ARXIGNIS_TENANT_ID) {
               try {
-                const filterEvent = await buildFilterEvent(request, {
+                filterEvent = await buildFilterEvent(request, {
                   requestId: request.headers.get('CF-Request-ID') || undefined,
                   tenantId: env.ARXIGNIS_TENANT_ID,
+                  additional,
                 });
-                
+
                 const idempotencyKey = await generateIdempotencyKey(request);
                 const filterResult = await sendFilterRequest(env as Env, filterEvent, {
                   idempotencyKey,
                   originalEvent: false,
                 });
-                
+
                 if (filterResult.error) {
                   console.warn('Filter request error:', filterResult.error);
                 } else if (filterResult.response?.json) {
                   filterAction = filterResult.response.json.action || null;
-                  span.setAttribute('filter.action', filterAction || 'none');
-                  span.setAttribute('filter.reason', filterResult.response.json.reason || 'none');
+                  filterReason = filterResult.response.json.reason;
+
+                  span.setAttribute('arxignis.filter.action', filterAction || 'none');
+                  span.setAttribute('arxignis.filter.reason', filterReason || 'unknown');
                   if (filterResult.response.json.details) {
-                    span.setAttribute('filter.files_scanned', filterResult.response.json.details.files_scanned || 0);
-                    span.setAttribute('filter.files_infected', filterResult.response.json.details.files_infected || 0);
+                    span.setAttribute('arxignis.filter.files_scanned', filterResult.response.json.details.files_scanned ?? 0);
+                    span.setAttribute('arxignis.filter.files_infected', filterResult.response.json.details.files_infected ?? 0);
                   }
-                  
+
                   console.log('Filter result:', JSON.stringify({
                     action: filterAction,
-                    reason: filterResult.response.json.reason,
+                    reason: filterReason,
                     details: filterResult.response.json.details
                   }));
                 }
@@ -225,15 +252,52 @@ const handler = {
                 span.recordException(error as Error);
               }
             }
-            
-            // If filter returned block, return block page
-            if (filterAction === 'block' && env.MODE === 'block') {
-              console.log('Blocked by filter service');
-              response = await env.ASSETS.fetch(new URL('block.html', request.url));
-            } else {
-              // Proxy to origin if allowed or filter not configured
-              response = await fetch(request);
+
+            if (filterAction === 'block') {
+              response = await respondWithBlock(filterReason || 'Blocked by Arxignis WAF', 'waf');
+              break;
             }
+
+            let scanBlocked = false;
+            if (filterEvent && filterEvent.http?.body && env.ARXIGNIS_API_URL && env.ARXIGNIS_API_KEY) {
+              const scanRequest = buildScanRequestFromEvent(filterEvent);
+              if (scanRequest) {
+                try {
+                  const scanResult = await sendScanRequest(env as Env, scanRequest);
+                  if (scanResult.error) {
+                    console.warn('Content scan error:', scanResult.error);
+                  } else if (scanResult.response?.json) {
+                    const scanJson = scanResult.response.json;
+                    const virusDetected = Boolean(
+                      scanJson?.virus_detected ||
+                      (typeof scanJson?.files_infected === 'number' && scanJson.files_infected > 0)
+                    );
+                    span.setAttribute('arxignis.scan.virus_detected', virusDetected ? 'true' : 'false');
+                    span.setAttribute('arxignis.scan.status', scanJson?.status || 'unknown');
+
+                    if (virusDetected) {
+                      const virusName = scanJson?.virus_name || 'unknown';
+                      response = await respondWithBlock(`Malware detected (${virusName})`, 'content_scan');
+                      scanBlocked = true;
+                    } else {
+                      console.log('Content scan result:', JSON.stringify(scanJson));
+                    }
+                  }
+                } catch (error) {
+                  console.warn('Content scan processing failed:', error);
+                  span.recordException(error as Error);
+                }
+              }
+            }
+
+            if (scanBlocked) {
+              break;
+            }
+
+            response = await fetch(request);
+            break;
+          }
+
         }
 
         // Set response attributes

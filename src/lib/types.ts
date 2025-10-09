@@ -158,3 +158,8 @@ export interface FilterApiResponse {
 	body: string;
 	json?: any;
 }
+
+export interface ScanRequestPayload {
+	content_type: string;
+	body: string;
+}

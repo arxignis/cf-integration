@@ -1,4 +1,4 @@
-﻿import type { FilterAdditionalData, FilterApiResponse, FilterEvent } from './types';
+﻿import type { FilterAdditionalData, FilterApiResponse, FilterEvent, ScanRequestPayload } from './types';
 
 interface Env {
   ARXIGNIS_API_URL?: string;
@@ -7,6 +7,7 @@ interface Env {
 
 const DEFAULT_BASE_URL = 'https://api.arxignis.com/v1';
 const FILTER_ENDPOINT = 'filter';
+const SCAN_ENDPOINT = 'scan';
 const DEFAULT_EVENT_TYPE = 'filter';
 const DEFAULT_SCHEMA_VERSION = '1.0';
 
@@ -64,6 +65,11 @@ function bytesToBinaryString(bytes: Uint8Array): string {
 }
 
 const DATA_URI_REGEX = /^data:([^;,]+)(?:;[^,]*)*;base64,(.+)$/i;
+
+interface BuildScanOverrides {
+  body?: string;
+  contentType?: string;
+}
 
 function decodeBase64ToBytes(data: string): Uint8Array {
   if (typeof atob === 'function') {
@@ -133,6 +139,33 @@ function extractDataUriFromJson(body: string): DataUriExtraction | null {
   return null;
 }
 
+function resolveContentType(
+  httpSection: FilterEvent['http'] | undefined,
+  overrides?: BuildScanOverrides,
+): string {
+  if (overrides?.contentType && overrides.contentType.length > 0) {
+    return overrides.contentType;
+  }
+
+  if (httpSection?.content_type) {
+    return httpSection.content_type;
+  }
+
+  const headers = httpSection?.headers;
+  if (headers) {
+    for (const [key, value] of Object.entries(headers)) {
+      if (key.toLowerCase() === 'content-type') {
+        if (Array.isArray(value)) {
+          return value[0] ?? 'application/octet-stream';
+        }
+        return value;
+      }
+    }
+  }
+
+  return 'application/octet-stream';
+}
+
 function setHeaderCaseInsensitive(
   headers: Record<string, string | string[]>,
   name: string,
@@ -162,6 +195,27 @@ export interface SendFilterRequestOptions {
   originalEvent?: boolean;
   method?: string;
   headers?: Record<string, string>;
+}
+
+export function buildScanRequestFromEvent(
+  event: FilterEvent,
+  overrides?: BuildScanOverrides,
+): ScanRequestPayload | null {
+  if (!event || !event.http) {
+    return null;
+  }
+
+  const sourceBody = overrides?.body ?? event.http.body;
+  if (!sourceBody || sourceBody.length === 0) {
+    return null;
+  }
+
+  const contentType = resolveContentType(event.http, overrides);
+
+  return {
+    content_type: contentType,
+    body: sourceBody,
+  };
 }
 
 export async function buildFilterEvent(
@@ -382,6 +436,86 @@ export async function sendFilterRequest(
     return {
       response: null,
       error: `filter API request failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+export async function sendScanRequest(
+  env: Env,
+  scanRequest: ScanRequestPayload,
+  options?: { method?: string; headers?: Record<string, string> }
+): Promise<{ response: FilterApiResponse | null; error?: string }> {
+  if (!scanRequest || !scanRequest.body) {
+    return { response: null, error: 'scanRequest.body is required' };
+  }
+
+  if (!scanRequest.content_type || scanRequest.content_type.trim() === '') {
+    scanRequest.content_type = 'application/octet-stream';
+  }
+
+  let payload: string;
+  try {
+    payload = JSON.stringify({
+      content_type: scanRequest.content_type,
+      body: scanRequest.body,
+    });
+  } catch (error) {
+    return {
+      response: null,
+      error: `failed to encode scan request: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+
+  const method = options?.method ? options.method.toUpperCase() : 'POST';
+  const baseUrl = sanitizeBaseUrl(env.ARXIGNIS_API_URL);
+  const url = `${baseUrl}/${SCAN_ENDPOINT}`;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (env.ARXIGNIS_API_KEY) {
+    headers.Authorization = `Bearer ${env.ARXIGNIS_API_KEY}`;
+  }
+
+  if (options?.headers) {
+    for (const [key, value] of Object.entries(options.headers)) {
+      headers[key] = value;
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: payload,
+    });
+
+    const text = await response.text();
+    let json: any;
+    try {
+      json = text ? JSON.parse(text) : undefined;
+    } catch (_error) {
+      json = undefined;
+    }
+
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    const scanResponse: FilterApiResponse = {
+      status: response.status,
+      headers: responseHeaders,
+      body: text,
+      json,
+    };
+
+    return { response: scanResponse };
+  } catch (error) {
+    return {
+      response: null,
+      error: `scan API request failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
