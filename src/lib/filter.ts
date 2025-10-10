@@ -1,4 +1,5 @@
 ﻿import type { FilterAdditionalData, FilterApiResponse, FilterEvent, ScanRequestPayload } from './types';
+import { isValidIP } from './helper';
 
 interface Env {
   ARXIGNIS_API_URL?: string;
@@ -288,14 +289,20 @@ export async function buildFilterEvent(
     }
   }
 
+  // Handle remote_ip validation - only include if it matches IPv4 or full IPv6 pattern
+  const clientIP = request.headers.get('CF-Connecting-IP');
+  const validRemoteIP = clientIP && isValidIP(clientIP)
+    ? clientIP
+    : null;
+
   const httpSection: FilterEvent['http'] = {
     method: request.method,
     path: url.pathname || null,
     query: queryString,
     host: host,
     scheme: url.protocol ? url.protocol.replace(':', '') : null,
-    port: url.port ? Number(url.port) : null,
-    remote_ip: request.headers.get('CF-Connecting-IP'),
+    port: 443,
+    remote_ip: validRemoteIP,
     user_agent: request.headers.get('user-agent') || request.headers.get('User-Agent'),
     content_type: headersObject['content-type']
       ? Array.isArray(headersObject['content-type'])
@@ -329,7 +336,7 @@ export async function buildFilterEvent(
     event_type: options.eventType || DEFAULT_EVENT_TYPE,
     schema_version: options.schemaVersion || DEFAULT_SCHEMA_VERSION,
     timestamp: options.timestamp || new Date().toISOString(),
-    request_id: options.requestId ?? undefined,
+    request_id: options.requestId && options.requestId.trim().length > 0 ? options.requestId : undefined,
     tenant_id: options.tenantId ?? undefined,
     http: httpSection,
   };

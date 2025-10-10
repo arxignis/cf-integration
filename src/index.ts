@@ -6,7 +6,7 @@ import { log } from './lib/log';
 import { metrics } from './lib/metrics';
 import { getLogBufferStatus, getMetricsBufferStatus, ArxignisLogBufferDO, ArxignisMetricsBufferDO } from './lib/durable-buffer';
 import version from './lib/version';
-import { ThreatResult, AccessRuleResult } from './lib/types';
+import { ThreatResult, AccessRuleResult, FilterEvent } from './lib/types';
 import { threat } from './lib/threat';
 import { accessRules } from './lib/access-rules';
 import { buildFilterEvent, buildScanRequestFromEvent, generateIdempotencyKey, sendFilterRequest, sendScanRequest } from './lib/filter';
@@ -35,7 +35,7 @@ const handler = {
         const clientIP = request.headers.get('CF-Connecting-IP') || '';
 
         // Check access rules first (if ruleId is provided)
-        const ruleId = request.headers.get('X-Access-Rule-ID') || env.ARXIGNIS_ACCESS_CONTROL_LIST_ID;
+        const ruleId = env.ARXIGNIS_ACCESS_RULE_LIST_ID;
         let accessRuleResult: AccessRuleResult | null = null;
 
         if (ruleId) {
@@ -111,7 +111,7 @@ const handler = {
             });
         }
 
-        let response: Response;
+        let response: Response = new Response('Internal Server Error', { status: 500 });
 
         switch (decision) {
           case 'block':
@@ -214,11 +214,11 @@ const handler = {
               mode: env.MODE,
             };
 
-            if (env.ARXIGNIS_API_URL && env.ARXIGNIS_API_KEY && env.ARXIGNIS_TENANT_ID) {
+            if (env.ARXIGNIS_API_URL && env.ARXIGNIS_API_KEY) {
               try {
+                const cfRequestId = request.headers.get('CF-Ray') || 'unknown';
                 filterEvent = await buildFilterEvent(request, {
-                  requestId: request.headers.get('CF-Request-ID') || undefined,
-                  tenantId: env.ARXIGNIS_TENANT_ID,
+                  requestId: cfRequestId && cfRequestId.trim().length > 0 ? cfRequestId : undefined,
                   additional,
                 });
 
@@ -276,7 +276,7 @@ const handler = {
                     span.setAttribute('arxignis.scan.status', scanJson?.status || 'unknown');
 
                     if (virusDetected) {
-                      const virusName = scanJson?.virus_name || 'unknown';
+                      const virusName = scanJson?.file_results?.[0]?.virus_name || 'unknown';
                       response = await respondWithBlock(`Malware detected (${virusName})`, 'content_scan');
                       scanBlocked = true;
                     } else {
