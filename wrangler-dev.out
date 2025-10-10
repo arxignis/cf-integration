@@ -1,0 +1,25 @@
+
+ ⛅️ wrangler 4.38.0 (update available 4.42.0)
+─────────────────────────────────────────────
+Your Worker has access to the following bindings:
+Binding                                                                                      Resource                  Mode
+env.LOG_BUFFER (ArxignisLogBufferDO)                                                         Durable Object            local
+env.METRICS_BUFFER (ArxignisMetricsBufferDO)                                                 Durable Object            local
+env.AX_CACHE (local-dev)                                                                     KV Namespace              local
+env.ASSETS                                                                                   Assets                    local
+env.ARXIGNIS_API_URL ("https://api.arxignis.com/v1")                                         Environment Variable      local
+env.ARXIGNIS_API_KEY ("2jVAYOnDygXoFIEiyJC9qD6If3dPRHrs2OX+p...")                            Environment Variable      local
+env.ARXIGNIS_TENANT_ID ("123")                                                               Environment Variable      local
+env.TURNSTILE_SITE_KEY ("")                                                                  Environment Variable      local
+env.TURNSTILE_SECRET_KEY ("")                                                                Environment Variable      local
+env.MODE ("block")                                                                           Environment Variable      local
+env.BUFFER_FLUSH_INTERVAL ("5000")                                                           Environment Variable      local
+env.BUFFER_MAX_RETRIES ("3")                                                                 Environment Variable      local
+env.PERFORMANCE_METRICS ("false")                                                            Environment Variable      local
+env.ARXIGNIS_ACCESS_CONTROL_LIST_CACHE_TTL ("300")                                           Environment Variable      local
+env.ARXIGNIS_ACCESS_CONTROL_LIST_ID ("")                                                     Environment Variable      local
+env.PROMETHEUS_URL ("https://api.axiom.co/v1/traces")                                        Environment Variable      local
+env.PROMETHEUS_HEADERS ({"Authorization":"Bearer test","X-Axi...)                            Environment Variable      local
+
+⎔ Starting local server...
+[wrangler:info] Ready on http://127.0.0.1:8787

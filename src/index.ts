@@ -6,9 +6,10 @@ import { log } from './lib/log';
 import { metrics } from './lib/metrics';
 import { getLogBufferStatus, getMetricsBufferStatus, ArxignisLogBufferDO, ArxignisMetricsBufferDO } from './lib/durable-buffer';
 import version from './lib/version';
-import { ThreatResult, AccessRuleResult } from './lib/types';
+import { ThreatResult, AccessRuleResult, FilterEvent } from './lib/types';
 import { threat } from './lib/threat';
 import { accessRules } from './lib/access-rules';
+import { buildFilterEvent, buildScanRequestFromEvent, generateIdempotencyKey, sendFilterRequest, sendScanRequest } from './lib/filter';
 interface ArxignisEnv extends Omit<Env, 'MODE'> {
 	MODE: 'block' | 'monitor';
 }
@@ -34,7 +35,7 @@ const handler = {
         const clientIP = request.headers.get('CF-Connecting-IP') || '';
 
         // Check access rules first (if ruleId is provided)
-        const ruleId = request.headers.get('X-Access-Rule-ID') || env.ARXIGNIS_ACCESS_CONTROL_LIST_ID;
+        const ruleId = env.ARXIGNIS_ACCESS_RULE_LIST_ID;
         let accessRuleResult: AccessRuleResult | null = null;
 
         if (ruleId) {
@@ -66,7 +67,15 @@ const handler = {
         try {
           span.setAttribute('origin_url', request.url);
           span.setAttribute('client.ip', clientIP);
-          span.setAttribute('client.ip_type', getIPType(clientIP));
+          if (clientIP) {
+            try {
+              span.setAttribute('client.ip_type', getIPType(clientIP));
+            } catch (error) {
+              span.setAttribute('client.ip_type', 'unknown');
+            }
+          } else {
+            span.setAttribute('client.ip_type', 'none');
+          }
           span.setAttribute('decision', decision || 'none');
           span.setAttribute(
             'decision_cached',
@@ -102,7 +111,7 @@ const handler = {
             });
         }
 
-        let response: Response;
+        let response: Response = new Response('Internal Server Error', { status: 500 });
 
         switch (decision) {
           case 'block':
@@ -139,40 +148,156 @@ const handler = {
             try {
               if (env.MODE != 'block') {
                 response = await fetch(request);
-              } else {
-                // Use the appropriate result for metrics
-                const resultForMetrics = accessRuleResult || threatResult;
-                if (resultForMetrics) {
-                  metrics(request, env as Env, resultForMetrics as ThreatResult);
-                }
-                console.log(
-                  JSON.stringify({
-                    ipAddress: clientIP,
-                    decision: decision,
-                    decisionCached: decisionCached || false,
-                    ruleId: ruleIdUsed
-                  })
-                );
-                response = await captcha(request, env as Env);
+                break;
               }
+              // Use the appropriate result for metrics
+              const resultForMetrics = accessRuleResult || threatResult;
+              if (resultForMetrics) {
+                metrics(request, env as Env, resultForMetrics as ThreatResult);
+              }
+              console.log(
+                JSON.stringify({
+                  ipAddress: clientIP,
+                  decision: decision,
+                  decisionCached: decisionCached || false,
+                  ruleId: ruleIdUsed
+                })
+              );
+              const captchaResult = await captcha(request, env as Env);
+              if (!captchaResult.solved) {
+                response = captchaResult.response ?? await fetch(request);
+                break;
+              }
+              decision = 'allow';
+              // fall through to default for filter processing
             } catch (error) {
               console.warn('Something went wrong with the captcha:', error);
               span.recordException(error as Error);
               span.setStatus({ code: SpanStatusCode.ERROR, message: 'Captcha processing failed' });
               response = await fetch(request);
+              break;
             }
-            break;
-          default:
+          default: {
             log(request, env as Env);
-            console.log(
-              JSON.stringify({
-                ipAddress: clientIP,
-                decision: decision,
-                decisionCached: decisionCached || false,
-                ruleId: ruleIdUsed
-              })
-            );
+            console.log(JSON.stringify({
+              ipAddress: clientIP,
+              decision: decision,
+              decisionCached: decisionCached || false,
+              ruleId: ruleIdUsed
+            }));
+
+            const respondWithBlock = async (reason: string, source: string): Promise<Response> => {
+              console.warn('Arxignis blocking request', { reason, source });
+              span.setAttribute('arxignis.block.reason', reason);
+              span.setAttribute('arxignis.block.source', source);
+
+              if (env.MODE === 'block') {
+                span.setAttribute('arxignis.block.mode', 'enforce');
+                if (env.ASSETS) {
+                  return env.ASSETS.fetch(new URL('block.html', request.url));
+                }
+                return new Response('Request blocked by Arxignis', { status: 403 });
+              }
+
+              span.setAttribute('arxignis.block.mode', 'monitor');
+              return fetch(request);
+            };
+
+            let filterAction: string | null = null;
+            let filterReason: string | undefined;
+            let filterEvent: FilterEvent | null = null;
+
+            const additional: Record<string, unknown> = {
+              remediation: decision || 'unknown',
+              threat_score: threatResult?.response?.intel?.score ?? undefined,
+              threat_rule: threatResult?.response?.intel?.rule_id ?? ruleIdUsed ?? undefined,
+              mode: env.MODE,
+            };
+
+            if (env.ARXIGNIS_API_URL && env.ARXIGNIS_API_KEY) {
+              try {
+                const cfRequestId = request.headers.get('CF-Ray') || 'unknown';
+                filterEvent = await buildFilterEvent(request, {
+                  requestId: cfRequestId && cfRequestId.trim().length > 0 ? cfRequestId : undefined,
+                  additional,
+                });
+
+                const idempotencyKey = await generateIdempotencyKey(request);
+                const filterResult = await sendFilterRequest(env as Env, filterEvent, {
+                  idempotencyKey,
+                  originalEvent: false,
+                });
+
+                if (filterResult.error) {
+                  console.warn('Filter request error:', filterResult.error);
+                } else if (filterResult.response?.json) {
+                  filterAction = filterResult.response.json.action || null;
+                  filterReason = filterResult.response.json.reason;
+
+                  span.setAttribute('arxignis.filter.action', filterAction || 'none');
+                  span.setAttribute('arxignis.filter.reason', filterReason || 'unknown');
+                  if (filterResult.response.json.details) {
+                    span.setAttribute('arxignis.filter.files_scanned', filterResult.response.json.details.files_scanned ?? 0);
+                    span.setAttribute('arxignis.filter.files_infected', filterResult.response.json.details.files_infected ?? 0);
+                  }
+
+                  console.log('Filter result:', JSON.stringify({
+                    action: filterAction,
+                    reason: filterReason,
+                    details: filterResult.response.json.details
+                  }));
+                }
+              } catch (error) {
+                console.warn('Filter processing failed:', error);
+                span.recordException(error as Error);
+              }
+            }
+
+            if (filterAction === 'block') {
+              response = await respondWithBlock(filterReason || 'Blocked by Arxignis WAF', 'waf');
+              break;
+            }
+
+            let scanBlocked = false;
+            if (filterEvent && filterEvent.http?.body && env.ARXIGNIS_API_URL && env.ARXIGNIS_API_KEY) {
+              const scanRequest = buildScanRequestFromEvent(filterEvent);
+              if (scanRequest) {
+                try {
+                  const scanResult = await sendScanRequest(env as Env, scanRequest);
+                  if (scanResult.error) {
+                    console.warn('Content scan error:', scanResult.error);
+                  } else if (scanResult.response?.json) {
+                    const scanJson = scanResult.response.json;
+                    const virusDetected = Boolean(
+                      scanJson?.virus_detected ||
+                      (typeof scanJson?.files_infected === 'number' && scanJson.files_infected > 0)
+                    );
+                    span.setAttribute('arxignis.scan.virus_detected', virusDetected ? 'true' : 'false');
+                    span.setAttribute('arxignis.scan.status', scanJson?.status || 'unknown');
+
+                    if (virusDetected) {
+                      const virusName = scanJson?.file_results?.[0]?.virus_name || 'unknown';
+                      response = await respondWithBlock(`Malware detected (${virusName})`, 'content_scan');
+                      scanBlocked = true;
+                    } else {
+                      console.log('Content scan result:', JSON.stringify(scanJson));
+                    }
+                  }
+                } catch (error) {
+                  console.warn('Content scan processing failed:', error);
+                  span.recordException(error as Error);
+                }
+              }
+            }
+
+            if (scanBlocked) {
+              break;
+            }
+
             response = await fetch(request);
+            break;
+          }
+
         }
 
         // Set response attributes
